@@ -1,15 +1,51 @@
-# Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
 *.so
-*.dylib
 
-# Test binary, built with `go test -c`
-*.test
+# Folders
+_obj
+_test
+.vagrant
+releases
+tmp
+.idea/
 
-# Output of the go coverage tool, specifically when used with LiteIDE
+# Architecture specific extensions/prefixes
+trace.out
 *.out
+.DS_Store
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
+*.cgo1.go
+*.cgo2.c
+_cgo_defun.c
+_cgo_gotypes.go
+_cgo_export.*
+
+_testmain.go
+
+*.exe
+*.test
+*.prof
+profile.cov
+coverage.html
+
+# Emacs backup files
+*~
+
+# ctags files
+tags
+
+# Project specific
+/chaosblade
+/blade
+/bin/java-agent*.jar
+/hack/chaosblade*
+/hack/lib/**
+/chaosblade.dat
+target
+coverage.txt
+vendor
+
+# Website
+site-build

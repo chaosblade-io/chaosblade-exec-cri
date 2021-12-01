@@ -6,7 +6,7 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/chaosblade-io/chaosblade-exec-os v1.3.1-0.20210906070659-0b8e3c15c25b
-	github.com/chaosblade-io/chaosblade-spec-go v1.3.1-0.20210906070321-ae22844733f2
+	github.com/chaosblade-io/chaosblade-spec-go v1.3.1-0.20211124120331-a95ad0aac789
 	github.com/containerd/containerd v1.5.6
 	github.com/docker/docker v0.0.0-20180612054059-a9fbbdc8dd87
 	github.com/docker/go-connections v0.4.0 // indirect
@@ -19,4 +19,3 @@ require (
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	google.golang.org/grpc v1.39.0 // indirect
 )
-
