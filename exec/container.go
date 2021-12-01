@@ -54,12 +54,12 @@ func (cms *ContainerCommandModelSpec) LongDesc() string {
 	return `Execute a container experiment.`
 }
 
-type removeActionCommand struct {
+type RemoveActionCommand struct {
 	spec.BaseExpActionCommandSpec
 }
 
 func NewRemoveActionCommand() spec.ExpActionCommandSpec {
-	return &removeActionCommand{
+	return &RemoveActionCommand{
 		spec.BaseExpActionCommandSpec{
 			ActionMatchers: []spec.ExpFlagSpec{},
 			ActionFlags: []spec.ExpFlagSpec{
@@ -77,19 +77,19 @@ blade create cri container remove --container-id a76d53933d3f. If container-runt
 	}
 }
 
-func (*removeActionCommand) Name() string {
+func (*RemoveActionCommand) Name() string {
 	return "remove"
 }
 
-func (*removeActionCommand) Aliases() []string {
+func (*RemoveActionCommand) Aliases() []string {
 	return []string{"rm"}
 }
 
-func (*removeActionCommand) ShortDesc() string {
+func (*RemoveActionCommand) ShortDesc() string {
 	return "remove a container"
 }
 
-func (r *removeActionCommand) LongDesc() string {
+func (r *RemoveActionCommand) LongDesc() string {
 	if r.ActionLongDesc != "" {
 		return r.ActionLongDesc
 	}

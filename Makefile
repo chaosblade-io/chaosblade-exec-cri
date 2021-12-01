@@ -1,7 +1,5 @@
 .PHONY: build clean
 
-BLADE_SRC_ROOT=`pwd`
-
 GO_ENV=CGO_ENABLED=1
 GO_MODULE=GO111MODULE=on
 GO=env $(GO_ENV) $(GO_MODULE) go
