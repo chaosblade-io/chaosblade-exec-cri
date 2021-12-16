@@ -42,6 +42,7 @@ func NewCriExpModelSpec() *dockerExpModelSpec {
 		networkCommandModelSpec,
 	}
 
+	javaExpModelSpecs := getJvmModels()
 	execInContainerModelSpecs := []spec.ExpModelCommandSpec{
 		newProcessCommandModelSpecForDocker(),
 		newCpuCommandModelSpecForDocker(),
@@ -49,6 +50,7 @@ func NewCriExpModelSpec() *dockerExpModelSpec {
 		newMemCommandModelSpecForDocker(),
 		newFileCommandSpecForDocker(),
 	}
+	execInContainerModelSpecs = append(execInContainerModelSpecs, javaExpModelSpecs...)
 	containerSelfModelSpec := NewContainerCommandSpec()
 
 	spec.AddExecutorToModelSpec(NewNetWorkSidecarExecutor(), networkCommandModelSpec)
