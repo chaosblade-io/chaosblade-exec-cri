@@ -7,7 +7,7 @@ GO=env $(GO_ENV) $(GO_MODULE) go
 UNAME := $(shell uname)
 
 ifeq ($(BLADE_VERSION), )
-	BLADE_VERSION=1.4.0
+	BLADE_VERSION=1.5.0
 endif
 
 BUILD_TARGET=target
@@ -18,6 +18,8 @@ BUILD_IMAGE_PATH=build/image/blade
 
 OS_YAML_FILE_NAME=chaosblade-cri-spec-$(BLADE_VERSION).yaml
 OS_YAML_FILE_PATH=$(BUILD_TARGET_YAML)/$(OS_YAML_FILE_NAME)
+
+CHAOSBLADE_PATH=build/cache/chaosblade
 
 ifeq ($(GOOS), linux)
 	GO_FLAGS=-ldflags="-linkmode external -extldflags -static"
@@ -32,7 +34,7 @@ pre_build:
 	mkdir -p $(BUILD_TARGET_YAML)
 
 build_yaml: build/spec.go
-	$(GO) run $< $(OS_YAML_FILE_PATH)
+	$(GO) run $< $(OS_YAML_FILE_PATH) $(CHAOSBLADE_PATH)/yaml/chaosblade-jvm-spec-$(BLADE_VERSION).yaml
 
 # test
 test:
