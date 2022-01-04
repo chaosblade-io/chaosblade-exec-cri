@@ -93,12 +93,16 @@ github.com/chaosblade-io/chaosblade-exec-os v1.3.1-0.20210906070659-0b8e3c15c25b
 github.com/chaosblade-io/chaosblade-exec-os v1.3.1-0.20210906070659-0b8e3c15c25b/go.mod h1:iAW5L9EbWcbZe+BSnpDbtVz7lLppkj2c676ziOft4II=
 github.com/chaosblade-io/chaosblade-exec-os v1.4.0 h1:/WTfyezz0TaNtvGQgrL/RPvpjfZZgZEb32uaWukTTbU=
 github.com/chaosblade-io/chaosblade-exec-os v1.4.0/go.mod h1:C/PKAeI2VE11dG+niR2YrlWTsBnUSHMWI3azKqHNKvQ=
+github.com/chaosblade-io/chaosblade-exec-os v1.5.0 h1:amM7NIy7k1wedprI0VHgJUrSGO+m3L/Q/Qoyx45wAt0=
+github.com/chaosblade-io/chaosblade-exec-os v1.5.0/go.mod h1:zcXZ9fXLTX2DyRRb5UqtZ1otOcOE0b0CAwoklUnO7Qo=
 github.com/chaosblade-io/chaosblade-spec-go v1.3.1-0.20210906070321-ae22844733f2 h1:IOoJiWizn6nOoWxH5TVVvwwVbZWrbOZoLwhVLriEdu0=
 github.com/chaosblade-io/chaosblade-spec-go v1.3.1-0.20210906070321-ae22844733f2/go.mod h1:xUF+8r54FphQjBR8fVPnweVqzu7EitE15UsnZ57O5gk=
 github.com/chaosblade-io/chaosblade-spec-go v1.3.1-0.20211124120331-a95ad0aac789 h1:F1ube2Hq9r1E4DPIlvIha/lTqiW+rfAQQNi36QOf5uw=
 github.com/chaosblade-io/chaosblade-spec-go v1.3.1-0.20211124120331-a95ad0aac789/go.mod h1:xUF+8r54FphQjBR8fVPnweVqzu7EitE15UsnZ57O5gk=
 github.com/chaosblade-io/chaosblade-spec-go v1.4.0 h1:NWGOoRpo4dFARgau6WqqaIaqj3KGxKIJZZF9W1JbkBE=
 github.com/chaosblade-io/chaosblade-spec-go v1.4.0/go.mod h1:xUF+8r54FphQjBR8fVPnweVqzu7EitE15UsnZ57O5gk=
+github.com/chaosblade-io/chaosblade-spec-go v1.5.0 h1:egLGiTLNrts5AZi0EKGUrILv6YKwh3TY0wqbFaoqQmI=
+github.com/chaosblade-io/chaosblade-spec-go v1.5.0/go.mod h1:xUF+8r54FphQjBR8fVPnweVqzu7EitE15UsnZ57O5gk=
 github.com/checkpoint-restore/go-criu/v4 v4.1.0/go.mod h1:xUQBLp4RLc5zJtWY++yjOoMoB5lihDt7fai+75m+rGw=
 github.com/checkpoint-restore/go-criu/v5 v5.0.0/go.mod h1:cfwC0EG7HMUenopBsUf9d89JlCLQIfgVcNsNN0t6T2M=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
