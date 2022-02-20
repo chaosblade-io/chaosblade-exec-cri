@@ -32,7 +32,7 @@ import (
 )
 
 type RunInSidecarContainerExecutor struct {
-	BaseDockerClientExecutor
+	BaseClientExecutor
 	runConfigFunc func(container string) (container.HostConfig, network.NetworkingConfig)
 	isResident    bool
 }
@@ -70,8 +70,8 @@ func NewNetWorkSidecarExecutor() *RunInSidecarContainerExecutor {
 		// set the client when invoking
 		runConfigFunc: runConfigFunc,
 		isResident:    false,
-		BaseDockerClientExecutor: BaseDockerClientExecutor{
-			CommandFunc: commonFunc,
+		BaseClientExecutor: BaseClientExecutor{
+			CommandFunc: CommonFunc,
 		},
 	}
 }

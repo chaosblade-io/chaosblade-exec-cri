@@ -29,19 +29,17 @@ import (
 	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container/docker"
 )
 
-const DstChaosBladeDir = "/opt"
-
 // BladeBin is the blade path in the chaosblade-tool image
 const BladeBin = "/opt/chaosblade/blade"
 
-// BaseDockerClientExecutor
-type BaseDockerClientExecutor struct {
+// BaseClientExecutor
+type BaseClientExecutor struct {
 	Client      container.Container
 	CommandFunc func(uid string, ctx context.Context, model *spec.ExpModel) string
 }
 
 // SetClient to the executor
-func (b *BaseDockerClientExecutor) SetClient(expModel *spec.ExpModel) error {
+func (b *BaseClientExecutor) SetClient(expModel *spec.ExpModel) error {
 	cli, err := GetClientByRuntime(expModel)
 	if err != nil {
 		return err
@@ -51,7 +49,7 @@ func (b *BaseDockerClientExecutor) SetClient(expModel *spec.ExpModel) error {
 }
 
 // commonFunc is the command created function
-var commonFunc = func(uid string, ctx context.Context, model *spec.ExpModel) string {
+var CommonFunc = func(uid string, ctx context.Context, model *spec.ExpModel) string {
 	matchers := spec.ConvertExpMatchersToString(model, func() map[string]spec.Empty {
 		return GetAllDockerFlagNames()
 	})

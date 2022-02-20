@@ -16,8 +16,11 @@ BUILD_TARGET_PKG_DIR=$(BUILD_TARGET)/chaosblade-$(BLADE_VERSION)
 BUILD_TARGET_YAML=$(BUILD_TARGET_PKG_DIR)/yaml
 BUILD_IMAGE_PATH=build/image/blade
 
-OS_YAML_FILE_NAME=chaosblade-cri-spec-$(BLADE_VERSION).yaml
-OS_YAML_FILE_PATH=$(BUILD_TARGET_YAML)/$(OS_YAML_FILE_NAME)
+CRI_OS_YAML_FILE_NAME=chaosblade-cri-spec-$(BLADE_VERSION).yaml
+CRI_OS_YAML_FILE_PATH=$(BUILD_TARGET_YAML)/$(CRI_OS_YAML_FILE_NAME)
+
+DOCKER_OS_YAML_FILE_NAME=chaosblade-docker-spec-$(BLADE_VERSION).yaml
+DOCKER_OS_YAML_FILE_PATH=$(BUILD_TARGET_YAML)/$(DOCKER_OS_YAML_FILE_NAME)
 
 CHAOSBLADE_PATH=build/cache/chaosblade
 
@@ -34,7 +37,8 @@ pre_build:
 	mkdir -p $(BUILD_TARGET_YAML)
 
 build_yaml: build/spec.go
-	$(GO) run $< $(OS_YAML_FILE_PATH) $(CHAOSBLADE_PATH)/yaml/chaosblade-jvm-spec-$(BLADE_VERSION).yaml
+	$(GO) run $< $(CRI_OS_YAML_FILE_PATH) cri $(CHAOSBLADE_PATH)/yaml/chaosblade-jvm-spec-$(BLADE_VERSION).yaml
+	$(GO) run $< $(DOCKER_OS_YAML_FILE_PATH) docker $(CHAOSBLADE_PATH)/yaml/chaosblade-jvm-spec-$(BLADE_VERSION).yaml
 
 # test
 test:

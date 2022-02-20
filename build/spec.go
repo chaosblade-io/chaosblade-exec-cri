@@ -17,6 +17,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -28,24 +29,32 @@ import (
 
 // main creates a yaml file of the experiments in the project
 func main() {
-	if len(os.Args) < 2 {
+	if len(os.Args) < 3 {
 		log.Panicln("less yaml file path")
 	}
-	if len(os.Args) == 3 {
-		exec.JvmSpecFileForYaml = os.Args[2]
+	if len(os.Args) == 4 {
+		exec.JvmSpecFileForYaml = os.Args[3]
 	}
-	err := util.CreateYamlFile(getModels(), os.Args[1])
+	err := util.CreateYamlFile(getModels(os.Args[2]), os.Args[1])
 	if err != nil {
 		log.Panicf("create yaml file error, %v", err)
 	}
 }
 
 // getModels returns the supported experiment specs
-func getModels() *spec.Models {
+func getModels(scope string) *spec.Models {
 	models := make([]*spec.Models, 0)
-	dockerModelSpec := exec.NewCriExpModelSpec()
-	for _, modelSpec := range dockerModelSpec.ExpModels() {
-		model := util.ConvertSpecToModels(modelSpec, spec.ExpPrepareModel{}, dockerModelSpec.Scope())
+	var modelSpecs *exec.DockerExpModelSpec
+	if scope == "cri" {
+		modelSpecs = exec.NewCriExpModelSpec()
+	} else if scope == "docker" {
+		modelSpecs = exec.NewDockerExpModelSpec()
+	} else {
+		log.Panicln(fmt.Sprintf("un support scope: %s", scope))
+	}
+
+	for _, modelSpec := range modelSpecs.ExpModels() {
+		model := util.ConvertSpecToModels(modelSpec, spec.ExpPrepareModel{}, modelSpec.Scope())
 		models = append(models, model)
 	}
 	return util.MergeModels(models...)

@@ -16,15 +16,11 @@
 package containerd
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"os"
-	"os/exec"
-	"strings"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -35,7 +31,6 @@ import (
 	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/containers"
 	"github.com/containerd/containerd/errdefs"
-	"github.com/containerd/containerd/mount"
 	"github.com/containerd/containerd/namespaces"
 	"github.com/containerd/containerd/oci"
 	ctrdutil "github.com/containerd/containerd/pkg/cri/util"
@@ -109,6 +104,21 @@ func NewClient(endpoint, namespace string) (*Client, error) {
 	return cli, nil
 }
 
+func (c *Client) GetPidById(containerId string) (int32, error, int32) {
+
+	ctx := context.Background()
+	container, err := c.cclient.LoadContainer(ctx, containerId)
+	if err != nil {
+		return -1, fmt.Errorf(spec.ContainerExecFailed.Sprintf("GetContainerList", err.Error())), spec.ContainerExecFailed.Code
+	}
+	task, err := container.Task(ctx, nil)
+	if err != nil {
+		return -1, fmt.Errorf(spec.ContainerExecFailed.Sprintf("GetContainerList", err.Error())), spec.ContainerExecFailed.Code
+	}
+
+	return int32(task.Pid()), nil, spec.OK.Code
+}
+
 func (c *Client) GetContainerById(containerId string) (container.ContainerInfo, error, int32) {
 	if c.cclient == nil {
 		return container.ContainerInfo{}, errors.New("containerd client is not available"), spec.ContainerExecFailed.Code
@@ -155,13 +165,8 @@ func (c *Client) RemoveContainer(containerId string, force bool) error {
 	return err
 }
 
-// https://github.com/containerd/containerd/issues/2044 dont have permissions, so use /proc/[pid]/root
-// 3 step:
-//$ sudo ctr run -t docker.io/library/busybox:latest test09 /bin/sh # create a container some how
-//$ sudo ctr  snapshot mounts /tmp/mymount test09 | xargs sudo # mount its filesystem
-//$ rsync -av /mydata /tmp/mymount
-//$ umount /tmp/mymount
 func (c *Client) CopyToContainer(containerId, srcFile, dstPath, extractDirName string, override bool) error {
+
 	containerDetail, err := c.cclient.LoadContainer(c.Ctx, containerId)
 	if err != nil {
 		return err
@@ -174,139 +179,15 @@ func (c *Client) CopyToContainer(containerId, srcFile, dstPath, extractDirName s
 
 	processId := task.Pid()
 
-	dstPathAbs := fmt.Sprintf("/proc/%v/root/%s", processId, dstPath)
-	cmd := exec.CommandContext(c.Ctx, "/bin/sh", "-c", fmt.Sprintf("[ -e %s ] && echo True || echo False", dstPathAbs))
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return err
-	}
-
-	if !strings.Contains(string(output), "True") {
-		cmd := exec.CommandContext(c.Ctx, "/bin/sh", "-c", fmt.Sprintf("mkdir -p %s", dstPathAbs))
-		_, err := cmd.CombinedOutput()
-		if err != nil {
-			return err
-		}
-	}
-
-	cmd = exec.CommandContext(c.Ctx, "/bin/sh", "-c", fmt.Sprintf("cp -R %s %s", srcFile, dstPathAbs))
-	_, err = cmd.CombinedOutput()
-	if err != nil {
-		return err
-	}
-
-	oriPathFileAbs := fmt.Sprintf("%s/%s.tar.gz", dstPathAbs, extractDirName)
-	cmd = exec.CommandContext(c.Ctx, "/bin/sh", "-c", fmt.Sprintf("cd %s && tar -xvf %s ", dstPathAbs, oriPathFileAbs))
-	output, err = cmd.CombinedOutput()
-
-	return err
-
-}
-
-func printMounts(target string, mounts []mount.Mount) {
-	// FIXME: This is specific to Unix
-	for _, m := range mounts {
-		fmt.Printf("mount -t %s %s %s -o %s\n", m.Type, m.Source, target, strings.Join(m.Options, ","))
-	}
-}
-
-type stdinCloser struct {
-	stdin  *os.File
-	closer func()
-}
-
-func (s *stdinCloser) Read(p []byte) (int, error) {
-	n, err := s.stdin.Read(p)
-	if err == io.EOF {
-		if s.closer != nil {
-			s.closer()
-		}
-	}
-	return n, err
+	return container.CopyToContainer(strconv.Itoa(int(processId)), srcFile, dstPath, extractDirName, override)
 }
 
 func (c *Client) ExecContainer(containerId, command string) (output string, err error) {
-	// 1. generate exec id
-	execId := "exec-" + util.GenerateExecID()
-
-	// 2. creating IO
-	direct, err := newDirectIO(c.Ctx, execId, false)
+	id, err, _ := c.GetPidById(containerId)
 	if err != nil {
 		return "", err
 	}
-	defer direct.Delete()
-
-	// 3. create buf for output
-	var (
-		buf = bytes.NewBuffer(nil)
-		wg  sync.WaitGroup
-	)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		io.Copy(buf, direct.Stdout)
-	}()
-
-	// 4. exec command in running container
-	containerDetail, err := c.cclient.LoadContainer(c.Ctx, containerId)
-	if err != nil {
-		return "", err
-	}
-
-	specInfo, err := containerDetail.Spec(c.Ctx)
-	if err != nil {
-		return "", err
-	}
-	pspec := specInfo.Process
-	pspec.Args = strings.Split(command, " ")
-
-	task, err := containerDetail.Task(c.Ctx, nil)
-	if err != nil {
-		return "", err
-	}
-
-	process, err := task.Exec(c.Ctx, execId, pspec, direct.IOCreate)
-	if err != nil {
-		return "", err
-	}
-
-	defer process.Delete(c.Ctx, containerd.WithProcessKill)
-
-	statusC, err := process.Wait(c.Ctx)
-	if err != nil {
-		return "", err
-	}
-
-	if err := process.Start(c.Ctx); err != nil {
-		return "", err
-	}
-
-	if process, err = task.LoadProcess(c.Ctx, execId, direct.IOAttach); err != nil {
-		return "", err
-	}
-
-	direct.Stdin.Close()
-	if err = process.CloseIO(c.Ctx, containerd.WithStdinCloser); err != nil {
-		return "", err
-	}
-
-	_, err = process.Status(c.Ctx)
-	if err != nil {
-		return "", err
-	}
-
-	<-statusC
-
-	wg.Wait()
-
-	// 5. get output
-	output = buf.String()
-
-	return output, nil
-}
-
-func (c *Client) ExecContainerPrivileged(containerId, command string) (output string, err error) {
-	return c.ExecContainer(containerId, command)
+	return container.ExecContainer(id, command)
 }
 
 //ExecuteAndRemove: create and start a container for executing a command, and remove the container
