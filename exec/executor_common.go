@@ -71,11 +71,18 @@ func (r *CommonExecutor) Exec(uid string, ctx context.Context, expModel *spec.Ex
 
 	var args string
 	var flags string
+
+	nsFlags := GetNSExecFlags()
+	m := make(map[string]string, len(nsFlags))
+	for _, f := range nsFlags {
+		m[f.FlagName()] = f.FlagName()
+	}
+
 	for k, v := range expModel.ActionFlags {
 		if v == "" {
 			continue
 		}
-		if k == ContainerIdFlag.Name {
+		if m[k] != "" {
 			continue
 		}
 		flags = fmt.Sprintf("%s --%s=%s", flags, k, v)
@@ -137,11 +144,10 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 
 	argsArray := strings.Split(args, " ")
 
-	command := exec.CommandContext(ctx, path.Join(util.GetProgramPath(), spec.BinPath, spec.NSExecBin), argsArray...)
-	buf := new(bytes.Buffer)
-	errBuf := new(bytes.Buffer)
-	command.Stdout = buf
-	command.Stderr = errBuf
+	bin := path.Join(util.GetProgramPath(), spec.BinPath, spec.NSExecBin)
+	logrus.Debugf("run command, %s %s", bin, args)
+
+	command := exec.CommandContext(ctx, bin, argsArray...)
 	command.SysProcAttr = &syscall.SysProcAttr{}
 
 	control, err := cgroups.Load(cgroups.V1, pidPath(int(pid)))
@@ -169,7 +175,17 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 			if comm, err := getProcessComm(command.Process.Pid); err != nil {
 				logrus.Errorf("get process comm failed, %s", err.Error())
 			} else {
-				logrus.Infof("wait nasexec cmd pasue, cur: %s", comm)
+				if cmdline, err := getProcessCmdline(command.Process.Pid); err != nil {
+					logrus.Errorf("get process cmdline failed, %s", err.Error())
+				} else {
+					if cmdline == "" {
+						logrus.Errorln("unknown err, process exit.")
+						signal <- true
+						break
+					}
+				}
+
+				logrus.Infof("wait nasexec process pasue, current comm: %s, pid: %d", comm, command.Process.Pid)
 				if comm == "pause\n" {
 					signal <- true
 					break
@@ -182,7 +198,7 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 	if <-signal {
 		for {
 			if err := command.Process.Signal(syscall.SIGCONT); err != nil {
-				sprintf := fmt.Sprintf("sned signal failed, %s", err.Error())
+				sprintf := fmt.Sprintf("send signal failed, %s", err.Error())
 				return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
 			}
 			time.Sleep(time.Millisecond)
@@ -190,19 +206,22 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 			if comm, err := getProcessComm(command.Process.Pid); err != nil {
 				logrus.Errorf("get process comm failed, %s", err.Error())
 			} else {
-				logrus.Infof("wait nasexec cmd resume, cur: %s", comm)
+				if cmdline, err := getProcessCmdline(command.Process.Pid); err != nil {
+					logrus.Errorf("get process cmdline failed, %s", err.Error())
+				} else {
+					if cmdline == "" {
+						logrus.Errorln("unknown err, process exit.")
+						break
+					}
+				}
+
+				logrus.Infof("wait nasexec process resume, current comm: %s, pid: %d", comm, command.Process.Pid)
 				if comm == "nsexec\n" {
 					break
 				}
 			}
 		}
 	}
-
-	if errBuf.String() != "" {
-		sprintf := fmt.Sprintf("create experiment failed, %s", errBuf.String())
-		return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
-	}
-	logrus.Debug("nsexec result: %s", buf.String())
 	return spec.ReturnSuccess(uid)
 }
 
@@ -229,6 +248,21 @@ func pidPath(pid int) cgroups.Path {
 
 func getProcessComm(pid int) (string, error) {
 	f, err := os.Open(fmt.Sprintf("%s/%d/comm", "/proc", pid))
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	b, err := ioutil.ReadAll(f)
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
+}
+
+func getProcessCmdline(pid int) (string, error) {
+	f, err := os.Open(fmt.Sprintf("%s/%d/cmdline", "/proc", pid))
 	if err != nil {
 		return "", err
 	}
