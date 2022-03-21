@@ -115,7 +115,7 @@ func (r *CommonExecutor) Exec(uid string, ctx context.Context, expModel *spec.Ex
 	buf := new(bytes.Buffer)
 	command.Stdout = buf
 	command.Stderr = buf
-
+	logrus.Debugf("run command, %s %s", chaosOsBin, args)
 	if err := command.Start(); err != nil {
 		sprintf := fmt.Sprintf("command start failed, %s", err.Error())
 		return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
@@ -123,8 +123,10 @@ func (r *CommonExecutor) Exec(uid string, ctx context.Context, expModel *spec.Ex
 
 	if err := command.Wait(); err != nil {
 		sprintf := fmt.Sprintf("command wait failed, %s", err.Error())
+		logrus.Debugf("command result: %s", buf.String())
 		return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
 	}
+	logrus.Debugf("command result: %s", buf.String())
 	return spec.Decode(buf.String(), nil)
 }
 

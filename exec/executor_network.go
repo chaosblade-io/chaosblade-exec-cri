@@ -64,11 +64,18 @@ func (r *NetworkExecutor) Exec(uid string, ctx context.Context, expModel *spec.E
 
 	var args string
 	var flags string
+
+	nsFlags := GetNSExecFlags()
+	m := make(map[string]string, len(nsFlags))
+	for _, f := range nsFlags {
+		m[f.FlagName()] = f.FlagName()
+	}
+
 	for k, v := range expModel.ActionFlags {
 		if v == "" {
 			continue
 		}
-		if k == ContainerIdFlag.Name {
+		if m[k] != "" {
 			continue
 		}
 		flags = fmt.Sprintf("%s --%s=%s", flags, k, v)
