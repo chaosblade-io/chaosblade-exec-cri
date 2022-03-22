@@ -19,8 +19,8 @@ package exec
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
+	osexec "github.com/chaosblade-io/chaosblade-exec-os/exec"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/model"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 	"github.com/chaosblade-io/chaosblade-spec-go/util"
@@ -152,7 +152,10 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 	command := exec.CommandContext(ctx, bin, argsArray...)
 	command.SysProcAttr = &syscall.SysProcAttr{}
 
-	control, err := cgroups.Load(cgroups.V1, pidPath(int(pid)))
+	root := expModel.ActionFlags["cgroup-root"]
+	logrus.Debugln("cgroup root path", root)
+
+	control, err := cgroups.Load(osexec.Hierarchy(root), osexec.PidPath(int(pid)))
 	if err != nil {
 		sprintf := fmt.Sprintf("cgroups load failed, %s", err.Error())
 		return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
@@ -225,27 +228,6 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 		}
 	}
 	return spec.ReturnSuccess(uid)
-}
-
-func pidPath(pid int) cgroups.Path {
-	p := fmt.Sprintf("/proc/%d/cgroup", pid)
-	paths, err := cgroups.ParseCgroupFile(p)
-	if err != nil {
-		return func(_ cgroups.Name) (string, error) {
-			return "", fmt.Errorf("failed to parse cgroup file %s: %s", p, err.Error())
-		}
-	}
-
-	return func(name cgroups.Name) (string, error) {
-		root, ok := paths[string(name)]
-		if !ok {
-			if root, ok = paths["name="+string(name)]; !ok {
-				return "", errors.New("controller is not supported")
-			}
-
-		}
-		return root, nil
-	}
 }
 
 func getProcessComm(pid int) (string, error) {

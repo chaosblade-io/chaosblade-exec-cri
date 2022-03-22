@@ -477,7 +477,6 @@ func GetNSExecFlags() []spec.ExpFlagSpec {
 	}
 }
 
-
 func GetAllDockerFlagNames() map[string]spec.Empty {
 	flagNames := make(map[string]spec.Empty, 0)
 	for _, flag := range GetExecInContainerFlags() {

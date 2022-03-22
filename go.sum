@@ -98,6 +98,8 @@ github.com/cespare/xxhash v1.1.0/go.mod h1:XrSqR1VqqWfGrhpAt58auRo0WTKS1nRRg3ghf
 github.com/cespare/xxhash/v2 v2.1.1/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/chaosblade-io/chaosblade-exec-os v1.5.1-0.20220321095410-5c246ce3ec58 h1:A10VNxwAcBbV7vVa1DdWkn0PX9m60+d2sQGEGT2VobI=
 github.com/chaosblade-io/chaosblade-exec-os v1.5.1-0.20220321095410-5c246ce3ec58/go.mod h1:q3zKGZhOUk+g1eA4HxkMtKgg9lWGFzzQdskJl0k/gfs=
+github.com/chaosblade-io/chaosblade-exec-os v1.5.1-0.20220322062546-fa199d028c27 h1:fzaUE27cQumlygF281Gc/LM5pBR7q26z+BYbjm3GRjM=
+github.com/chaosblade-io/chaosblade-exec-os v1.5.1-0.20220322062546-fa199d028c27/go.mod h1:q3zKGZhOUk+g1eA4HxkMtKgg9lWGFzzQdskJl0k/gfs=
 github.com/chaosblade-io/chaosblade-spec-go v1.5.1-0.20220321094513-e6d60eaa6a30 h1:gf0T40/sdg2byLw73xfxZZSvk8Xxo0ECTLnC4//94YY=
 github.com/chaosblade-io/chaosblade-spec-go v1.5.1-0.20220321094513-e6d60eaa6a30/go.mod h1:977aR5J4BBfLtFkYZkbHv1i7NJYN1X0x85xO3b8YLpc=
 github.com/checkpoint-restore/go-criu/v4 v4.1.0/go.mod h1:xUQBLp4RLc5zJtWY++yjOoMoB5lihDt7fai+75m+rGw=
