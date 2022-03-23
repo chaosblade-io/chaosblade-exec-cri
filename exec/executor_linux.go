@@ -25,6 +25,8 @@ import (
 	"github.com/chaosblade-io/chaosblade-spec-go/util"
 
 	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container"
+	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container/containerd"
+	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container/docker"
 )
 
 // BladeBin is the blade path in the chaosblade-tool image
@@ -73,6 +75,17 @@ func ConvertContainerOutputToResponse(output string, err error, defaultResponse 
 			"cannot get result message from container, please execute recovery and try again")
 	}
 	return spec.Decode(output, defaultResponse)
+}
+
+func GetClientByRuntime(expModel *spec.ExpModel) (container.Container, error) {
+	switch expModel.ActionFlags[ContainerRuntime.Name] {
+	case container.ContainerdRuntime:
+		return containerd.NewClient(expModel.ActionFlags[EndpointFlag.Name], expModel.ActionFlags[ContainerNamespace.Name])
+	default:
+		return docker.NewClient(expModel.ActionFlags[EndpointFlag.Name])
+		//default:
+		//	return nil,errors.New(fmt.Sprintf("`%s`, the container runtime not support", expModel.ActionFlags[ContainerRuntime.Name]))
+	}
 }
 
 // GetContainer return container by container flag, such as container id or container name.

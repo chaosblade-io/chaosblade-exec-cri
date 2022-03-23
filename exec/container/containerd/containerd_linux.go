@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -179,7 +178,7 @@ func (c *Client) CopyToContainer(containerId, srcFile, dstPath, extractDirName s
 
 	processId := task.Pid()
 
-	return container.CopyToContainer(strconv.Itoa(int(processId)), srcFile, dstPath, extractDirName, override)
+	return container.CopyToContainer(processId, srcFile, dstPath, extractDirName, override)
 }
 
 func (c *Client) ExecContainer(containerId, command string) (output string, err error) {

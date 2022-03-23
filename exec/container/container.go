@@ -17,11 +17,6 @@ package container
 
 import (
 	"fmt"
-	"github.com/chaosblade-io/chaosblade-spec-go/spec"
-	"github.com/chaosblade-io/chaosblade-spec-go/util"
-	"os"
-	"os/exec"
-	"path"
 	"time"
 
 	containertype "github.com/docker/docker/api/types/container"
@@ -50,45 +45,6 @@ type Container interface {
 	ExecuteAndRemove(config *containertype.Config, hostConfig *containertype.HostConfig,
 		networkConfig *network.NetworkingConfig, containerName string, removed bool, timeout time.Duration,
 		command string, containerInfo ContainerInfo) (containerId string, output string, err error, code int32)
-}
-
-func CopyToContainer(pid, srcFile, dstPath, extractDirName string, override bool) error {
-
-	command := exec.Command(path.Join(util.GetProgramPath(), "bin", spec.NSExecBin),
-		"-t", pid,
-		"-p", "-m",
-		"--",
-		"/bin/sh", "-c",
-		fmt.Sprintf("cat > %s", path.Join(dstPath, srcFile)))
-
-	open, err := os.Open(srcFile)
-	defer open.Close()
-	if err != nil {
-		return err
-	}
-	command.Stdin = open
-	if err := command.Start(); err != nil {
-		return err
-	}
-	if err := command.Wait(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func ExecContainer(pid int32, command string) (output string, err error) {
-
-	cmd := exec.Command("/bin/sh", "-c",
-		fmt.Sprintf("%s -t %d -p -m -- %s",
-			path.Join(util.GetBinPath(), "nsexec"),
-			pid,
-			command))
-
-	if combinedOutput, err := cmd.CombinedOutput(); err != nil {
-		return "", err
-	} else {
-		return string(combinedOutput), nil
-	}
 }
 
 //ContainerInfo for server
