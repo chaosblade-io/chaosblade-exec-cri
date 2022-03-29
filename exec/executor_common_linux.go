@@ -153,6 +153,10 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 	command.SysProcAttr = &syscall.SysProcAttr{}
 
 	root := expModel.ActionFlags["cgroup-root"]
+	if root == "" {
+		root = "/sys/fs/cgroup/"
+	}
+
 	logrus.Debugln("cgroup root path", root)
 
 	control, err := cgroups.Load(osexec.Hierarchy(root), osexec.PidPath(int(pid)))
