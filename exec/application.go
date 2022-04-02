@@ -17,12 +17,13 @@
 package exec
 
 import (
+	"context"
 	"fmt"
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"path"
 
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 	"github.com/chaosblade-io/chaosblade-spec-go/util"
-	"github.com/sirupsen/logrus"
 
 	"github.com/chaosblade-io/chaosblade-exec-cri/version"
 )
@@ -38,7 +39,7 @@ func getJvmModels() []spec.ExpModelCommandSpec {
 	modelCommandSpecs := make([]spec.ExpModelCommandSpec, 0)
 	models, err := util.ParseSpecsToModel(jvmSpecFile, nil)
 	if err != nil {
-		logrus.Warningf("parse java spec failed, so skip it, %s", err)
+		log.Warnf(context.Background(), "parse java spec failed, so skip it, %s", err)
 		return modelCommandSpecs
 	}
 	for idx := range models.Models {

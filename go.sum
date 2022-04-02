@@ -100,6 +100,8 @@ github.com/chaosblade-io/chaosblade-exec-os v1.5.1-0.20220329020636-29bde5a0cdbb
 github.com/chaosblade-io/chaosblade-exec-os v1.5.1-0.20220329020636-29bde5a0cdbb/go.mod h1:q3zKGZhOUk+g1eA4HxkMtKgg9lWGFzzQdskJl0k/gfs=
 github.com/chaosblade-io/chaosblade-spec-go v1.5.1-0.20220321094513-e6d60eaa6a30 h1:gf0T40/sdg2byLw73xfxZZSvk8Xxo0ECTLnC4//94YY=
 github.com/chaosblade-io/chaosblade-spec-go v1.5.1-0.20220321094513-e6d60eaa6a30/go.mod h1:977aR5J4BBfLtFkYZkbHv1i7NJYN1X0x85xO3b8YLpc=
+github.com/chaosblade-io/chaosblade-spec-go v1.5.1-0.20220401060251-dba68401260e h1:BhFCao5pgvKf/gdND43WnyEvrpcZevlP/uO079xwrn0=
+github.com/chaosblade-io/chaosblade-spec-go v1.5.1-0.20220401060251-dba68401260e/go.mod h1:977aR5J4BBfLtFkYZkbHv1i7NJYN1X0x85xO3b8YLpc=
 github.com/checkpoint-restore/go-criu/v4 v4.1.0/go.mod h1:xUQBLp4RLc5zJtWY++yjOoMoB5lihDt7fai+75m+rGw=
 github.com/checkpoint-restore/go-criu/v5 v5.0.0/go.mod h1:cfwC0EG7HMUenopBsUf9d89JlCLQIfgVcNsNN0t6T2M=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=

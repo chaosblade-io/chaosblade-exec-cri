@@ -20,10 +20,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 	"github.com/chaosblade-io/chaosblade-spec-go/util"
 	"github.com/containerd/containerd"
@@ -38,9 +40,6 @@ import (
 	containertype "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/sirupsen/logrus"
-
-	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container"
 )
 
 const (
@@ -103,9 +102,8 @@ func NewClient(endpoint, namespace string) (*Client, error) {
 	return cli, nil
 }
 
-func (c *Client) GetPidById(containerId string) (int32, error, int32) {
+func (c *Client) GetPidById(ctx context.Context, containerId string) (int32, error, int32) {
 
-	ctx := context.Background()
 	container, err := c.cclient.LoadContainer(ctx, containerId)
 	if err != nil {
 		return -1, fmt.Errorf(spec.ContainerExecFailed.Sprintf("GetContainerList", err.Error())), spec.ContainerExecFailed.Code
@@ -118,7 +116,7 @@ func (c *Client) GetPidById(containerId string) (int32, error, int32) {
 	return int32(task.Pid()), nil, spec.OK.Code
 }
 
-func (c *Client) GetContainerById(containerId string) (container.ContainerInfo, error, int32) {
+func (c *Client) GetContainerById(ctx context.Context, containerId string) (container.ContainerInfo, error, int32) {
 	if c.cclient == nil {
 		return container.ContainerInfo{}, errors.New("containerd client is not available"), spec.ContainerExecFailed.Code
 	}
@@ -131,7 +129,7 @@ func (c *Client) GetContainerById(containerId string) (container.ContainerInfo, 
 	return convertContainerInfo(containerDetail), nil, spec.OK.Code
 }
 
-func (c *Client) GetContainerByName(containerName string) (container.ContainerInfo, error, int32) {
+func (c *Client) GetContainerByName(ctx context.Context, containerName string) (container.ContainerInfo, error, int32) {
 	// containerd have not name. so maybe it is not usefull
 	filters := []string{fmt.Sprintf("runtime,name==%s", containerName)}
 	containerDetails, err := c.cclient.ContainerService().List(c.Ctx, filters...)
@@ -151,7 +149,7 @@ func convertContainerInfo(containerDetail containers.Container) container.Contai
 		Spec:   containerDetail.Spec,
 	}
 }
-func (c *Client) RemoveContainer(containerId string, force bool) error {
+func (c *Client) RemoveContainer(ctx context.Context, containerId string, force bool) error {
 	err := c.cclient.ContainerService().Delete(c.Ctx, containerId)
 	if err == nil {
 		return nil
@@ -164,7 +162,7 @@ func (c *Client) RemoveContainer(containerId string, force bool) error {
 	return err
 }
 
-func (c *Client) CopyToContainer(containerId, srcFile, dstPath, extractDirName string, override bool) error {
+func (c *Client) CopyToContainer(ctx context.Context, containerId, srcFile, dstPath, extractDirName string, override bool) error {
 
 	containerDetail, err := c.cclient.LoadContainer(c.Ctx, containerId)
 	if err != nil {
@@ -178,19 +176,19 @@ func (c *Client) CopyToContainer(containerId, srcFile, dstPath, extractDirName s
 
 	processId := task.Pid()
 
-	return container.CopyToContainer(processId, srcFile, dstPath, extractDirName, override)
+	return container.CopyToContainer(ctx, processId, srcFile, dstPath, extractDirName, override)
 }
 
-func (c *Client) ExecContainer(containerId, command string) (output string, err error) {
-	id, err, _ := c.GetPidById(containerId)
+func (c *Client) ExecContainer(ctx context.Context, containerId, command string) (output string, err error) {
+	id, err, _ := c.GetPidById(ctx, containerId)
 	if err != nil {
 		return "", err
 	}
-	return container.ExecContainer(id, command)
+	return container.ExecContainer(ctx, id, command)
 }
 
 //ExecuteAndRemove: create and start a container for executing a command, and remove the container
-func (c *Client) ExecuteAndRemove(config *containertype.Config, hostConfig *containertype.HostConfig,
+func (c *Client) ExecuteAndRemove(ctx context.Context, config *containertype.Config, hostConfig *containertype.HostConfig,
 	networkConfig *network.NetworkingConfig, containerName string, removed bool, timeout time.Duration,
 	command string, containerInfo container.ContainerInfo) (containerId string, output string, err error, code int32) {
 
@@ -276,7 +274,7 @@ func (c *Client) ExecuteAndRemove(config *containertype.Config, hostConfig *cont
 		defer deferCancel()
 
 		if err := cntr.Delete(deferCtx, containerd.WithSnapshotCleanup); err != nil {
-			logrus.Warnf("Failed to delete containerd container %v, err: %v", containerId, err)
+			log.Warnf(ctx, "Failed to delete containerd container %v, err: %v", containerId, err)
 		}
 	}()
 
@@ -287,7 +285,7 @@ func (c *Client) ExecuteAndRemove(config *containertype.Config, hostConfig *cont
 	}
 	defer func() {
 		if _, err = task.Delete(c.Ctx); err != nil {
-			logrus.Warnf("Failed to delete containerd task %v, err: %v", containerId, err)
+			log.Warnf(ctx, "Failed to delete containerd task %v, err: %v", containerId, err)
 		}
 	}()
 
@@ -301,7 +299,7 @@ func (c *Client) ExecuteAndRemove(config *containertype.Config, hostConfig *cont
 	}
 
 	// 7. exec command in new container
-	output, err = c.ExecContainer(containerId, command)
+	output, err = c.ExecContainer(ctx, containerId, command)
 	if err != nil {
 		return containerId, output, fmt.Errorf(spec.ContainerExecFailed.Sprintf(command, err)), spec.ContainerExecFailed.Code
 	}

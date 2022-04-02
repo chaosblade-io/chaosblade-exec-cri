@@ -19,12 +19,11 @@ package exec
 import (
 	"context"
 	"fmt"
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"strings"
 
-	"github.com/chaosblade-io/chaosblade-spec-go/spec"
-	"github.com/chaosblade-io/chaosblade-spec-go/util"
-
 	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container"
+	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 )
 
 // BladeBin is the blade path in the chaosblade-tool image
@@ -76,22 +75,22 @@ func ConvertContainerOutputToResponse(output string, err error, defaultResponse 
 }
 
 // GetContainer return container by container flag, such as container id or container name.
-func GetContainer(client container.Container, uid string, containerId, containerName string) (container.ContainerInfo, *spec.Response) {
+func GetContainer(ctx context.Context, client container.Container, uid string, containerId, containerName string) (container.ContainerInfo, *spec.Response) {
 	if containerId == "" && containerName == "" {
 		tips := fmt.Sprintf("%s or %s", ContainerIdFlag.Name, ContainerNameFlag.Name)
-		util.Errorf(uid, util.GetRunFuncName(), spec.ParameterLess.Sprintf(tips))
+		log.Errorf(ctx, spec.ParameterLess.Sprintf(tips))
 		return container.ContainerInfo{}, spec.ResponseFailWithFlags(spec.ParameterLess, tips)
 	}
 	var container container.ContainerInfo
 	var code int32
 	var err error
 	if containerId != "" {
-		container, err, code = client.GetContainerById(containerId)
+		container, err, code = client.GetContainerById(ctx, containerId)
 	} else {
-		container, err, code = client.GetContainerByName(containerName)
+		container, err, code = client.GetContainerByName(ctx, containerName)
 	}
 	if err != nil {
-		util.Errorf(uid, util.GetRunFuncName(), err.Error())
+		log.Errorf(ctx, err.Error())
 		return container, spec.ResponseFail(code, err.Error(), nil)
 	}
 	return container, spec.ReturnSuccess(container)

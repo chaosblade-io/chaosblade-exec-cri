@@ -19,14 +19,12 @@ package exec
 import (
 	"context"
 	"fmt"
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"time"
 
-	"github.com/chaosblade-io/chaosblade-spec-go/util"
+	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
-	"github.com/sirupsen/logrus"
-
-	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 
 	execContainer "github.com/chaosblade-io/chaosblade-exec-cri/exec/container"
 )
@@ -43,12 +41,12 @@ func (*RunInSidecarContainerExecutor) Name() string {
 
 func (r *RunInSidecarContainerExecutor) Exec(uid string, ctx context.Context, expModel *spec.ExpModel) *spec.Response {
 	if err := r.SetClient(expModel); err != nil {
-		util.Errorf(uid, util.GetRunFuncName(), spec.ContainerExecFailed.Sprintf("GetClient", err))
+		log.Errorf(ctx, spec.ContainerExecFailed.Sprintf("GetClient", err))
 		return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "GetClient", err)
 	}
 	containerId := expModel.ActionFlags[ContainerIdFlag.Name]
 	containerName := expModel.ActionFlags[ContainerNameFlag.Name]
-	containerInfo, response := GetContainer(r.Client, uid, containerId, containerName)
+	containerInfo, response := GetContainer(ctx, r.Client, uid, containerId, containerName)
 	if !response.Success {
 		return response
 	}
@@ -103,14 +101,14 @@ func (r *RunInSidecarContainerExecutor) startAndExecInContainer(uid string, ctx 
 	config := r.getContainerConfig(expModel)
 	var defaultResponse *spec.Response
 	command := r.CommandFunc(uid, ctx, expModel)
-	sidecarContainerId, output, err, code := r.Client.ExecuteAndRemove(
+	sidecarContainerId, output, err, code := r.Client.ExecuteAndRemove(ctx,
 		config, hostConfig, networkConfig, containerName, true, time.Second, command, containerInfo)
 
 	if err != nil {
-		util.Errorf(uid, util.GetRunFuncName(), err.Error())
+		log.Errorf(ctx, err.Error())
 		return spec.ResponseFail(code, err.Error(), nil)
 	}
 	returnedResponse := ConvertContainerOutputToResponse(output, err, defaultResponse)
-	logrus.Infof("sidecarContainerId for experiment %s is %s, output is %s, err is %v", uid, sidecarContainerId, output, err)
+	log.Infof(ctx,"sidecarContainerId for experiment %s is %s, output is %s, err is %v", uid, sidecarContainerId, output, err)
 	return returnedResponse
 }

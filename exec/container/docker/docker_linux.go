@@ -16,23 +16,24 @@
 package docker
 
 import (
+	"context"
 	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container"
 )
 
-func (c *Client) ExecContainer(containerId, command string) (output string, err error) {
-	id, err, _ := c.GetPidById(containerId)
+func (c *Client) ExecContainer(ctx context.Context, containerId, command string) (output string, err error) {
+	id, err, _ := c.GetPidById(ctx, containerId)
 	if err != nil {
 		return "", err
 	}
-	return container.ExecContainer(id, command)
+	return container.ExecContainer(ctx, id, command)
 }
 
 // CopyToContainer copies a tar file to the dstPath.
 // If the same file exits in the dstPath, it will be override if the override arg is true, otherwise not
-func (c *Client) CopyToContainer(containerId, srcFile, dstPath, extractDirName string, override bool) error {
-	id, err, _ := c.GetPidById(containerId)
+func (c *Client) CopyToContainer(ctx context.Context, containerId, srcFile, dstPath, extractDirName string, override bool) error {
+	id, err, _ := c.GetPidById(ctx, containerId)
 	if err != nil {
 		return err
 	}
-	return container.CopyToContainer(uint32(id), srcFile, dstPath, extractDirName, override)
+	return container.CopyToContainer(ctx, uint32(id), srcFile, dstPath, extractDirName, override)
 }

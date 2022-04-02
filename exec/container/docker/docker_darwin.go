@@ -19,25 +19,24 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/sirupsen/logrus"
 	"os"
 	"strings"
 )
 
 //execContainer with command which does not contain "sh -c" in the target container
-func execContainerWithConf(containerId, command string, config types.ExecConfig, c *Client) (output string, err error) {
-	logrus.Infof("execute command: %s", strings.Join(config.Cmd, " "))
-	ctx := context.Background()
+func execContainerWithConf(ctx context.Context, containerId, command string, config types.ExecConfig, c *Client) (output string, err error) {
+	log.Infof(ctx, "execute command: %s", strings.Join(config.Cmd, " "))
 	id, err := c.client.ContainerExecCreate(ctx, containerId, config)
 	if err != nil {
-		logrus.Warningf("Create exec for container: %s, err: %s", containerId, err.Error())
+		log.Warnf(ctx, "Create exec for container: %s, err: %s", containerId, err.Error())
 		return "", err
 	}
 	resp, err := c.client.ContainerExecAttach(ctx, id.ID, types.ExecStartCheck{})
 	if err != nil {
-		logrus.Warningf("Attach exec for container: %s, err: %s", containerId, err.Error())
+		log.Warnf(ctx, "Attach exec for container: %s, err: %s", containerId, err.Error())
 		return "", err
 	}
 	defer resp.Close()
@@ -45,12 +44,12 @@ func execContainerWithConf(containerId, command string, config types.ExecConfig,
 	stderr := new(bytes.Buffer)
 	_, err = stdcopy.StdCopy(stdout, stderr, resp.Reader)
 	if err != nil {
-		logrus.Warningf("Attach exec for container: %s, err: %s", containerId, err.Error())
+		log.Warnf(ctx, "Attach exec for container: %s, err: %s", containerId, err.Error())
 		return "", err
 	}
 	result := stdout.String()
 	errorMsg := stderr.String()
-	logrus.Debugf("execute result: %s, error msg: %s", result, errorMsg)
+	log.Debugf(ctx, "execute result: %s, error msg: %s", result, errorMsg)
 	if errorMsg != "" {
 		return "", fmt.Errorf(errorMsg)
 	} else {
@@ -58,8 +57,8 @@ func execContainerWithConf(containerId, command string, config types.ExecConfig,
 	}
 }
 
-func (c *Client) ExecContainer(containerId, command string) (output string, err error) {
-	return execContainerWithConf(containerId, command, types.ExecConfig{
+func (c *Client) ExecContainer(ctx context.Context, containerId, command string) (output string, err error) {
+	return execContainerWithConf(ctx, containerId, command, types.ExecConfig{
 		AttachStderr: true,
 		AttachStdout: true,
 		Cmd:          []string{"sh", "-c", command},
@@ -70,13 +69,13 @@ func (c *Client) ExecContainer(containerId, command string) (output string, err 
 
 // CopyToContainer copies a tar file to the dstPath.
 // If the same file exits in the dstPath, it will be override if the override arg is true, otherwise not
-func (c *Client) CopyToContainer(containerId, srcFile, dstPath, extractDirName string, override bool) error {
+func (c *Client) CopyToContainer(ctx context.Context, containerId, srcFile, dstPath, extractDirName string, override bool) error {
 	// must be a tar file
 	options := types.CopyToContainerOptions{
 		AllowOverwriteDirWithFile: override,
 		CopyUIDGID:                true,
 	}
-	_, err := c.ExecContainer(containerId, fmt.Sprintf("mkdir -p %s", dstPath))
+	_, err := c.ExecContainer(ctx, containerId, fmt.Sprintf("mkdir -p %s", dstPath))
 	if err != nil {
 		return err
 	}

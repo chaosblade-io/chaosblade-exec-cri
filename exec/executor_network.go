@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/model"
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 	"github.com/chaosblade-io/chaosblade-spec-go/util"
 	"os/exec"
@@ -47,18 +48,18 @@ func (r *NetworkExecutor) Name() string {
 
 func (r *NetworkExecutor) Exec(uid string, ctx context.Context, expModel *spec.ExpModel) *spec.Response {
 	if err := r.SetClient(expModel); err != nil {
-		util.Errorf(uid, util.GetRunFuncName(), spec.ContainerExecFailed.Sprintf("GetClient", err))
+		log.Errorf(ctx, spec.ContainerExecFailed.Sprintf("GetClient", err))
 		return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "GetClient", err)
 	}
 	containerId := expModel.ActionFlags[ContainerIdFlag.Name]
 	containerName := expModel.ActionFlags[ContainerNameFlag.Name]
-	container, response := GetContainer(r.Client, uid, containerId, containerName)
+	container, response := GetContainer(ctx, r.Client, uid, containerId, containerName)
 	if !response.Success {
 		return response
 	}
-	pid, err, code := r.Client.GetPidById(container.ContainerId)
+	pid, err, code := r.Client.GetPidById(ctx, container.ContainerId)
 	if err != nil {
-		util.Errorf(uid, util.GetRunFuncName(), err.Error())
+		log.Errorf(ctx, err.Error())
 		return spec.ResponseFail(code, err.Error(), nil)
 	}
 

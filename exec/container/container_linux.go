@@ -17,25 +17,26 @@ package container
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 	"github.com/chaosblade-io/chaosblade-spec-go/util"
-	"github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
 	"path"
 	"strings"
 )
 
-func CopyToContainer(pid uint32, srcFile, dstPath, extractDirName string, override bool) error {
+func CopyToContainer(ctx context.Context, pid uint32, srcFile, dstPath, extractDirName string, override bool) error {
 
 	args := fmt.Sprintf("-t %d -p -m -- /bin/sh -c", pid)
 	argsArray := strings.Split(args, " ")
 	nsbin := path.Join(util.GetProgramPath(), "bin", spec.NSExecBin)
 
 	command := fmt.Sprintf("cat > %s", path.Join(dstPath, path.Base(srcFile)))
-	logrus.Infoln("run copy cmd: ", nsbin, args, command)
+	log.Infof(ctx, "run copy cmd: ", nsbin, args, command)
 
 	cmd := exec.Command(nsbin, append(argsArray, command)...)
 
@@ -56,7 +57,7 @@ func CopyToContainer(pid uint32, srcFile, dstPath, extractDirName string, overri
 	if err := cmd.Wait(); err != nil {
 		return err
 	}
-	logrus.Debugf("Command Result, output: %s, errMsg: %s", outMsg.String(), errMsg.String())
+	log.Debugf(ctx, "Command Result, output: %s, errMsg: %s", outMsg.String(), errMsg.String())
 
 	if errMsg.Len() != 0 {
 		return errors.New(errMsg.String())
@@ -64,7 +65,7 @@ func CopyToContainer(pid uint32, srcFile, dstPath, extractDirName string, overri
 
 	// tar -zxf
 	command = fmt.Sprintf("-t %d -p -m -- tar -zxf %s -C %s", pid, path.Join(dstPath, path.Base(srcFile)), dstPath)
-	logrus.Infoln("run tar cmd: ", nsbin, command)
+	log.Infof(ctx, "run tar cmd: %s %s", nsbin, command)
 	cmd = exec.Command(nsbin, strings.Split(command, " ")...)
 	//
 	var outMsg2 bytes.Buffer
@@ -72,7 +73,7 @@ func CopyToContainer(pid uint32, srcFile, dstPath, extractDirName string, overri
 	cmd.Stdout = &outMsg2
 	cmd.Stderr = &errMsg2
 	err = cmd.Run()
-	logrus.Debugf("Tar Command Result, output: %s, errMsg: %s,  err: %v", outMsg.String(), errMsg.String(), err)
+	log.Debugf(ctx, "Tar Command Result, output: %s, errMsg: %s,  err: %v", outMsg.String(), errMsg.String(), err)
 
 	if err != nil {
 		return err
@@ -85,13 +86,13 @@ func CopyToContainer(pid uint32, srcFile, dstPath, extractDirName string, overri
 	return nil
 }
 
-func ExecContainer(pid int32, command string) (output string, err error) {
+func ExecContainer(ctx context.Context, pid int32, command string) (output string, err error) {
 
 	args := fmt.Sprintf("-t %d -p -m -- /bin/sh -c", pid)
 	argsArray := strings.Split(args, " ")
 	nsbin := path.Join(util.GetProgramPath(), "bin", spec.NSExecBin)
 
-	logrus.Infoln("cxec container cmd: ", nsbin, args, command)
+	log.Infof(ctx, "cxec container cmd: %s %s ", nsbin, args, command)
 
 	cmd := exec.Command(nsbin, append(argsArray, command)...)
 
@@ -101,7 +102,7 @@ func ExecContainer(pid int32, command string) (output string, err error) {
 	cmd.Stderr = &errMsg
 	err = cmd.Run()
 
-	logrus.Debugf("Command Result, output: %s, errMsg: %s, err: %v", outMsg.String(), errMsg.String(), err)
+	log.Debugf(ctx, "Command Result, output: %s, errMsg: %s, err: %v", outMsg.String(), errMsg.String(), err)
 
 	if err != nil {
 		return "", err
