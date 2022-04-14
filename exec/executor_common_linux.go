@@ -79,10 +79,7 @@ func (r *CommonExecutor) Exec(uid string, ctx context.Context, expModel *spec.Ex
 	}
 
 	for k, v := range expModel.ActionFlags {
-		if v == "" {
-			continue
-		}
-		if m[k] != "" {
+		if v == "" || m[k] != "" || k == "timeout" {
 			continue
 		}
 		flags = fmt.Sprintf("%s --%s=%s", flags, k, v)
@@ -123,7 +120,10 @@ func (r *CommonExecutor) Exec(uid string, ctx context.Context, expModel *spec.Ex
 
 	if err := command.Wait(); err != nil {
 		sprintf := fmt.Sprintf("command wait failed, %s", err.Error())
-		log.Debugf(ctx, "command result: %s", buf.String())
+		log.Debugf(ctx, "command result: %s, err: %s", buf.String(), err.Error())
+		if buf.Len() > 0 {
+			return spec.ReturnFail(spec.OsCmdExecFailed, buf.String())
+		}
 		return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
 	}
 	log.Debugf(ctx, "command result: %s", buf.String())
@@ -231,7 +231,7 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 			}
 		}
 	}
-	return spec.ReturnSuccess(uid)
+	return spec.ReturnSuccess(command.Process.Pid)
 }
 
 func getProcessComm(pid int) (string, error) {
