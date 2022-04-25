@@ -133,6 +133,21 @@ func (c *Client) GetContainerByName(containerName string) (container.ContainerIn
 	return convertContainerInfo(containerDetails[0]), nil, spec.OK.Code
 }
 
+func (c *Client) GetContainerByLabelSelector(labels map[string]string) (container.ContainerInfo, error, int32) {
+	filters := make([]string, 0)
+
+	for k, v := range labels {
+		filters = append(filters, fmt.Sprintf(`labels."%s"==%s`, k, v))
+	}
+
+	containerDetails, err := c.cclient.ContainerService().List(c.Ctx, strings.Join(filters, ","))
+	if err != nil {
+		return container.ContainerInfo{}, err, spec.ContainerExecFailed.Code
+	}
+
+	return convertContainerInfo(containerDetails[0]), nil, spec.OK.Code
+}
+
 func convertContainerInfo(containerDetail containers.Container) container.ContainerInfo {
 	return container.ContainerInfo{
 		ContainerId:   containerDetail.ID,
