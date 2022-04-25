@@ -90,9 +90,9 @@ func GetClientByRuntime(expModel *spec.ExpModel) (container.Container, error) {
 }
 
 // GetContainer return container by container flag, such as container id or container name.
-func GetContainer(client container.Container, uid string, containerId, containerName string) (container.ContainerInfo, *spec.Response) {
-	if containerId == "" && containerName == "" {
-		tips := fmt.Sprintf("%s or %s", ContainerIdFlag.Name, ContainerNameFlag.Name)
+func GetContainer(client container.Container, uid string, containerId, containerName string, containerLabelSelector map[string]string) (container.ContainerInfo, *spec.Response) {
+	if containerId == "" && containerName == "" && containerLabelSelector == nil {
+		tips := fmt.Sprintf("%s or %s or %s", ContainerIdFlag.Name, ContainerNameFlag.Name, ContainerLabelSelectorFlag.Name)
 		util.Errorf(uid, util.GetRunFuncName(), spec.ParameterLess.Sprintf(tips))
 		return container.ContainerInfo{}, spec.ResponseFailWithFlags(spec.ParameterLess, tips)
 	}
@@ -101,12 +101,29 @@ func GetContainer(client container.Container, uid string, containerId, container
 	var err error
 	if containerId != "" {
 		container, err, code = client.GetContainerById(containerId)
-	} else {
+	} else if containerName != "" {
 		container, err, code = client.GetContainerByName(containerName)
+	} else {
+		container, err, code = client.GetContainerByLabelSelector(containerLabelSelector)
 	}
 	if err != nil {
 		util.Errorf(uid, util.GetRunFuncName(), err.Error())
 		return container, spec.ResponseFail(code, err.Error(), nil)
 	}
 	return container, spec.ReturnSuccess(container)
+}
+
+func parseContainerLabelSelector(raw string) map[string]string {
+	labels := make(map[string]string, 0)
+
+	if raw != "" {
+		for _, label := range strings.Split(raw, ",") {
+			keyAndValue := strings.Split(label, "=")
+			if len(keyAndValue) == 2 {
+				labels[keyAndValue[0]] = keyAndValue[1]
+			}
+		}
+	}
+
+	return labels
 }

@@ -62,7 +62,8 @@ func (r *RunCmdInContainerExecutorByCP) Exec(uid string, ctx context.Context, ex
 	}
 	containerId := expModel.ActionFlags[ContainerIdFlag.Name]
 	containerName := expModel.ActionFlags[ContainerNameFlag.Name]
-	container, response := GetContainer(r.Client, uid, containerId, containerName)
+	containerLabelSelector := parseContainerLabelSelector(expModel.ActionFlags[ContainerNameFlag.Name])
+	container, response := GetContainer(r.Client, uid, containerId, containerName, containerLabelSelector)
 	if !response.Success {
 		return response
 	}

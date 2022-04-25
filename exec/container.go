@@ -118,7 +118,8 @@ func (e *removeActionExecutor) Exec(uid string, ctx context.Context, model *spec
 	}
 	containerId := flags[ContainerIdFlag.Name]
 	containerName := flags[ContainerNameFlag.Name]
-	container, response := GetContainer(client, uid, containerId, containerName)
+	containerLabelSelector := parseContainerLabelSelector(flags[ContainerNameFlag.Name])
+	container, response := GetContainer(client, uid, containerId, containerName, containerLabelSelector)
 	if !response.Success {
 		return response
 	}

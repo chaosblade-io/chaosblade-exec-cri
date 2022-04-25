@@ -37,6 +37,7 @@ const (
 type Container interface {
 	GetContainerById(containerId string) (ContainerInfo, error, int32)
 	GetContainerByName(containerName string) (ContainerInfo, error, int32)
+	GetContainerByLabelSelector(containerLabelSelector map[string]string) (ContainerInfo, error, int32)
 	RemoveContainer(containerId string, force bool) error
 	CopyToContainer(containerId, srcFile, dstPath, extractDirName string, override bool) error
 

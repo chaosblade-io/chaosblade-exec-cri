@@ -48,7 +48,8 @@ func (r *RunInSidecarContainerExecutor) Exec(uid string, ctx context.Context, ex
 	}
 	containerId := expModel.ActionFlags[ContainerIdFlag.Name]
 	containerName := expModel.ActionFlags[ContainerNameFlag.Name]
-	containerInfo, response := GetContainer(r.Client, uid, containerId, containerName)
+	containerLabelSelector := parseContainerLabelSelector(expModel.ActionFlags[ContainerLabelSelectorFlag.Name])
+	containerInfo, response := GetContainer(r.Client, uid, containerId, containerName, containerLabelSelector)
 	if !response.Success {
 		return response
 	}
