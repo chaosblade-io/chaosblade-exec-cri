@@ -17,7 +17,6 @@
 package exec
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/model"
@@ -102,21 +101,13 @@ func (r *NetworkExecutor) Exec(uid string, ctx context.Context, expModel *spec.E
 	argsArray := strings.Split(args, " ")
 
 	command := exec.CommandContext(ctx, chaosOsBin, argsArray...)
-
-	buf := new(bytes.Buffer)
-	command.Stdout = buf
-	command.Stderr = buf
-
-	if err := command.Start(); err != nil {
-		sprintf := fmt.Sprintf("command start failed, %s", err.Error())
-		return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
+	output, err := command.CombinedOutput()
+	outMsg := string(output)
+	log.Debugf(ctx, "Command Result, output: %v, err: %v", outMsg, err)
+	if err != nil {
+		return spec.ReturnFail(spec.OsCmdExecFailed, fmt.Sprintf("command exec failed, %s", err.Error()))
 	}
-
-	if err := command.Wait(); err != nil {
-		sprintf := fmt.Sprintf("command wait failed, %s", err.Error())
-		return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
-	}
-	return spec.Decode(buf.String(), nil)
+	return spec.Decode(outMsg, nil)
 }
 
 func (r *NetworkExecutor) SetChannel(channel spec.Channel) {

@@ -17,7 +17,6 @@
 package exec
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	osexec "github.com/chaosblade-io/chaosblade-exec-os/exec"
@@ -108,26 +107,13 @@ func (r *CommonExecutor) Exec(uid string, ctx context.Context, expModel *spec.Ex
 	argsArray := strings.Split(args, " ")
 
 	command := exec.CommandContext(ctx, chaosOsBin, argsArray...)
-
-	buf := new(bytes.Buffer)
-	command.Stdout = buf
-	command.Stderr = buf
-	log.Debugf(ctx, "run command, %s %s", chaosOsBin, args)
-	if err := command.Start(); err != nil {
-		sprintf := fmt.Sprintf("command start failed, %s", err.Error())
-		return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
+	output, err := command.CombinedOutput()
+	outMsg := string(output)
+	log.Debugf(ctx, "Command Result, output: %v, err: %v", outMsg, err)
+	if err != nil {
+		return spec.ReturnFail(spec.OsCmdExecFailed, fmt.Sprintf("command exec failed, %s", err.Error()))
 	}
-
-	if err := command.Wait(); err != nil {
-		sprintf := fmt.Sprintf("command wait failed, %s", err.Error())
-		log.Debugf(ctx, "command result: %s, err: %s", buf.String(), err.Error())
-		if buf.Len() > 0 {
-			return spec.ReturnFail(spec.OsCmdExecFailed, buf.String())
-		}
-		return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
-	}
-	log.Debugf(ctx, "command result: %s", buf.String())
-	return spec.Decode(buf.String(), nil)
+	return spec.Decode(outMsg, nil)
 }
 
 func (r *CommonExecutor) SetChannel(channel spec.Channel) {
