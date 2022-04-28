@@ -75,9 +75,9 @@ func ConvertContainerOutputToResponse(output string, err error, defaultResponse 
 }
 
 // GetContainer return container by container flag, such as container id or container name.
-func GetContainer(ctx context.Context, client container.Container, uid string, containerId, containerName string) (container.ContainerInfo, *spec.Response) {
+func GetContainer(ctx context.Context, client container.Container, uid string, containerId, containerName string, containerLabelSelector map[string]string) (container.ContainerInfo, *spec.Response) {
 	if containerId == "" && containerName == "" {
-		tips := fmt.Sprintf("%s or %s", ContainerIdFlag.Name, ContainerNameFlag.Name)
+		tips := fmt.Sprintf("%s or %s", ContainerIdFlag.Name, ContainerNameFlag.Name, ContainerLabelSelectorFlag.Name)
 		log.Errorf(ctx, spec.ParameterLess.Sprintf(tips))
 		return container.ContainerInfo{}, spec.ResponseFailWithFlags(spec.ParameterLess, tips)
 	}
@@ -86,12 +86,29 @@ func GetContainer(ctx context.Context, client container.Container, uid string, c
 	var err error
 	if containerId != "" {
 		container, err, code = client.GetContainerById(ctx, containerId)
-	} else {
+	} else if containerName != "" {
 		container, err, code = client.GetContainerByName(ctx, containerName)
+	} else {
+		container, err, code = client.GetContainerByLabelSelector(containerLabelSelector)
 	}
 	if err != nil {
 		log.Errorf(ctx, err.Error())
 		return container, spec.ResponseFail(code, err.Error(), nil)
 	}
 	return container, spec.ReturnSuccess(container)
+}
+
+func parseContainerLabelSelector(raw string) map[string]string {
+	labels := make(map[string]string, 0)
+
+	if raw != "" {
+		for _, label := range strings.Split(raw, ",") {
+			keyAndValue := strings.Split(label, "=")
+			if len(keyAndValue) == 2 {
+				labels[keyAndValue[0]] = keyAndValue[1]
+			}
+		}
+	}
+
+	return labels
 }

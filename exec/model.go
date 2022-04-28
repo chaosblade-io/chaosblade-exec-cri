@@ -385,6 +385,14 @@ var ContainerNameFlag = &spec.ExpFlag{
 	RequiredWhenDestroyed: false,
 }
 
+var ContainerLabelSelectorFlag = &spec.ExpFlag{
+	Name:                  "container-label-selector",
+	Desc:                  "Container label selector, when used with container-id or container-name, container-id or container-name is preferred",
+	NoArgs:                false,
+	Required:              false,
+	RequiredWhenDestroyed: false,
+}
+
 var ImageRepoFlag = &spec.ExpFlag{
 	Name:     "image-repo",
 	Desc:     "Image repository of the chaosblade-tool",
@@ -477,9 +485,28 @@ func GetNSExecFlags() []spec.ExpFlagSpec {
 	}
 }
 
+func getAllDockerFlags() []spec.ExpFlagSpec {
+	allFlags := make([]spec.ExpFlagSpec, 0)
+	allFlags = append(allFlags, GetContainerSelfFlags()...)
+	allFlags = append(allFlags, GetExecSidecarFlags()...)
+	allFlags = append(allFlags, GetExecInContainerFlags()...)
+
+	set := make(map[spec.ExpFlagSpec]bool, 0)
+	flags := make([]spec.ExpFlagSpec, 0)
+
+	for i := range allFlags {
+		if !set[allFlags[i]] {
+			flags = append(flags, allFlags[i])
+			set[allFlags[i]] = true
+		}
+	}
+
+	return flags
+}
+
 func GetAllDockerFlagNames() map[string]spec.Empty {
 	flagNames := make(map[string]spec.Empty, 0)
-	for _, flag := range GetExecInContainerFlags() {
+	for _, flag := range getAllDockerFlags() {
 		flagNames[flag.FlagName()] = spec.Empty{}
 	}
 	return flagNames

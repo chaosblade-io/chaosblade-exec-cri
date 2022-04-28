@@ -131,6 +131,19 @@ func (c *Client) GetContainerByName(ctx context.Context, containerName string) (
 
 }
 
+func (c *Client) GetContainerByLabelSelector(labels map[string]string) (container.ContainerInfo, error, int32) {
+	args := make([]filters.KeyValuePair, 0)
+
+	for k, v := range labels {
+		args = append(args, filters.Arg("label", fmt.Sprintf("%s=%s", k, v)))
+	}
+
+	return c.GetContainerFromDocker(types.ContainerListOptions{
+		All:     true,
+		Filters: filters.NewArgs(args...),
+	})
+}
+
 func (c *Client) GetContainerFromDocker(option types.ContainerListOptions) (container.ContainerInfo, error, int32) {
 	containers, err := c.client.ContainerList(context.Background(), option)
 

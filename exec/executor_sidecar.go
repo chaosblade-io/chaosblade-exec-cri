@@ -46,7 +46,8 @@ func (r *RunInSidecarContainerExecutor) Exec(uid string, ctx context.Context, ex
 	}
 	containerId := expModel.ActionFlags[ContainerIdFlag.Name]
 	containerName := expModel.ActionFlags[ContainerNameFlag.Name]
-	containerInfo, response := GetContainer(ctx, r.Client, uid, containerId, containerName)
+	containerLabelSelector := parseContainerLabelSelector(expModel.ActionFlags[ContainerLabelSelectorFlag.Name])
+	containerInfo, response := GetContainer(ctx, r.Client, uid, containerId, containerName, containerLabelSelector)
 	if !response.Success {
 		return response
 	}
@@ -109,6 +110,6 @@ func (r *RunInSidecarContainerExecutor) startAndExecInContainer(uid string, ctx 
 		return spec.ResponseFail(code, err.Error(), nil)
 	}
 	returnedResponse := ConvertContainerOutputToResponse(output, err, defaultResponse)
-	log.Infof(ctx,"sidecarContainerId for experiment %s is %s, output is %s, err is %v", uid, sidecarContainerId, output, err)
+	log.Infof(ctx, "sidecarContainerId for experiment %s is %s, output is %s, err is %v", uid, sidecarContainerId, output, err)
 	return returnedResponse
 }

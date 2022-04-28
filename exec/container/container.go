@@ -39,6 +39,7 @@ type Container interface {
 	GetPidById(ctx context.Context, containerId string) (int32, error, int32)
 	GetContainerById(ctx context.Context, containerId string) (ContainerInfo, error, int32)
 	GetContainerByName(ctx context.Context, containerName string) (ContainerInfo, error, int32)
+	GetContainerByLabelSelector(containerLabelSelector map[string]string) (ContainerInfo, error, int32)
 	RemoveContainer(ctx context.Context, containerId string, force bool) error
 	CopyToContainer(ctx context.Context, containerId, srcFile, dstPath, extractDirName string, override bool) error
 

@@ -61,7 +61,8 @@ func (r *RunCmdInContainerExecutorByCP) Exec(uid string, ctx context.Context, ex
 	}
 	containerId := expModel.ActionFlags[ContainerIdFlag.Name]
 	containerName := expModel.ActionFlags[ContainerNameFlag.Name]
-	container, response := GetContainer(ctx, r.Client, uid, containerId, containerName)
+	containerLabelSelector := parseContainerLabelSelector(expModel.ActionFlags[ContainerNameFlag.Name])
+	container, response := GetContainer(ctx, r.Client, uid, containerId, containerName, containerLabelSelector)
 	if !response.Success {
 		return response
 	}
@@ -100,14 +101,14 @@ func (r *RunCmdInContainerExecutorByCP) Exec(uid string, ctx context.Context, ex
 		}
 		err = r.DeployChaosBlade(ctx, container.ContainerId, chaosbladeReleaseFile, extractedDirName, override)
 		if err != nil {
-			log.Errorf(ctx,"DeployChaosBlade err: %v", err)
+			log.Errorf(ctx, "DeployChaosBlade err: %v", err)
 			return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "DeployChaosBlade", err)
 		}
 	}
 	output, err := r.Client.ExecContainer(ctx, container.ContainerId, command)
 	var defaultResponse *spec.Response
 	if err != nil {
-		log.Errorf(ctx,"execContainer err: %v", err)
+		log.Errorf(ctx, "execContainer err: %v", err)
 		return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "execContainer", err)
 	}
 	return ConvertContainerOutputToResponse(output, err, defaultResponse)
