@@ -16,6 +16,7 @@
 package container
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -35,15 +36,15 @@ const (
 )
 
 type Container interface {
-	GetContainerById(containerId string) (ContainerInfo, error, int32)
-	GetContainerByName(containerName string) (ContainerInfo, error, int32)
+	GetPidById(ctx context.Context, containerId string) (int32, error, int32)
+	GetContainerById(ctx context.Context, containerId string) (ContainerInfo, error, int32)
+	GetContainerByName(ctx context.Context, containerName string) (ContainerInfo, error, int32)
 	GetContainerByLabelSelector(containerLabelSelector map[string]string) (ContainerInfo, error, int32)
-	RemoveContainer(containerId string, force bool) error
-	CopyToContainer(containerId, srcFile, dstPath, extractDirName string, override bool) error
+	RemoveContainer(ctx context.Context, containerId string, force bool) error
+	CopyToContainer(ctx context.Context, containerId, srcFile, dstPath, extractDirName string, override bool) error
 
-	ExecContainer(containerId, command string) (output string, err error)
-	ExecContainerPrivileged(containerId, command string) (output string, err error)
-	ExecuteAndRemove(config *containertype.Config, hostConfig *containertype.HostConfig,
+	ExecContainer(ctx context.Context, containerId, command string) (output string, err error)
+	ExecuteAndRemove(ctx context.Context, config *containertype.Config, hostConfig *containertype.HostConfig,
 		networkConfig *network.NetworkingConfig, containerName string, removed bool, timeout time.Duration,
 		command string, containerInfo ContainerInfo) (containerId string, output string, err error, code int32)
 }

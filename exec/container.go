@@ -18,9 +18,9 @@ package exec
 
 import (
 	"context"
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
-	"github.com/chaosblade-io/chaosblade-spec-go/util"
 )
 
 const (
@@ -113,21 +113,21 @@ func (e *removeActionExecutor) Exec(uid string, ctx context.Context, model *spec
 	flags := model.ActionFlags
 	client, err := GetClientByRuntime(model)
 	if err != nil {
-		util.Errorf(uid, util.GetRunFuncName(), spec.ContainerExecFailed.Sprintf("GetClient", err))
+		log.Errorf(ctx, spec.ContainerExecFailed.Sprintf("GetClient", err))
 		return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "GetClient", err)
 	}
 	containerId := flags[ContainerIdFlag.Name]
 	containerName := flags[ContainerNameFlag.Name]
 	containerLabelSelector := parseContainerLabelSelector(flags[ContainerNameFlag.Name])
-	container, response := GetContainer(client, uid, containerId, containerName, containerLabelSelector)
+	container, response := GetContainer(ctx, client, uid, containerId, containerName, containerLabelSelector)
 	if !response.Success {
 		return response
 	}
 	forceFlag := flags[ForceFlag]
 
-	err = client.RemoveContainer(container.ContainerId, judgeForce(forceFlag))
+	err = client.RemoveContainer(ctx, container.ContainerId, judgeForce(forceFlag))
 	if err != nil {
-		util.Errorf(uid, util.GetRunFuncName(), spec.ContainerExecFailed.Sprintf("ContainerRemove", err))
+		log.Errorf(ctx, spec.ContainerExecFailed.Sprintf("ContainerRemove", err))
 		return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "ContainerRemove", err)
 	}
 	return spec.ReturnSuccess(uid)

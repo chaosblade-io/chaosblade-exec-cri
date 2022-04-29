@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-package version
+package exec
 
-// Default version is latest, you can specify the value at compile time, see Makefile in chaosblade project for the details
-var BladeVersion = "1.6.0"
+import (
+	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container"
+	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container/docker"
+	"github.com/chaosblade-io/chaosblade-spec-go/spec"
+)
+
+func GetClientByRuntime(expModel *spec.ExpModel) (container.Container, error) {
+	return docker.NewClient(expModel.ActionFlags[EndpointFlag.Name])
+}

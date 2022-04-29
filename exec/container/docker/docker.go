@@ -16,15 +16,13 @@
 package docker
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
-	"strings"
 	"time"
 
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 	"github.com/docker/docker/api/types"
 	containertype "github.com/docker/docker/api/types/container"
@@ -32,8 +30,6 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/sirupsen/logrus"
 
 	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container"
 )
@@ -104,7 +100,17 @@ func ping(cli *client.Client) (*client.Client, error) {
 	return nil, err
 }
 
-func (c *Client) GetContainerById(containerId string) (container.ContainerInfo, error, int32) {
+func (c *Client) GetPidById(ctx context.Context, containerId string) (int32, error, int32) {
+	inspect, err := c.client.ContainerInspect(context.Background(), containerId)
+
+	if err != nil {
+		return -1, fmt.Errorf(spec.ContainerExecFailed.Sprintf("GetContainerList", err.Error())), spec.ContainerExecFailed.Code
+	}
+
+	return int32(inspect.State.Pid), nil, spec.OK.Code
+}
+
+func (c *Client) GetContainerById(ctx context.Context, containerId string) (container.ContainerInfo, error, int32) {
 	option := types.ContainerListOptions{
 		Filters: filters.NewArgs(
 			filters.Arg("id", containerId),
@@ -114,7 +120,7 @@ func (c *Client) GetContainerById(containerId string) (container.ContainerInfo, 
 }
 
 //getContainerByName returns the container object by container name
-func (c *Client) GetContainerByName(containerName string) (container.ContainerInfo, error, int32) {
+func (c *Client) GetContainerByName(ctx context.Context, containerName string) (container.ContainerInfo, error, int32) {
 	option := types.ContainerListOptions{
 		All: true,
 		Filters: filters.NewArgs(
@@ -160,104 +166,26 @@ func convertContainerInfo(container2 types.Container) container.ContainerInfo {
 }
 
 //RemoveContainer
-func (c *Client) RemoveContainer(containerId string, force bool) error {
+func (c *Client) RemoveContainer(ctx context.Context, containerId string, force bool) error {
 	err := c.client.ContainerRemove(context.Background(), containerId, types.ContainerRemoveOptions{
 		Force: force,
 	})
 	if err != nil {
-		logrus.Warningf("Remove container: %s, err: %s", containerId, err)
+		log.Warnf(ctx, "Remove container: %s, err: %s", containerId, err)
 		return err
 	}
 	return nil
 }
 
-// CopyToContainer copies a tar file to the dstPath.
-// If the same file exits in the dstPath, it will be override if the override arg is true, otherwise not
-func (c *Client) CopyToContainer(containerId, srcFile, dstPath, extractDirName string, override bool) error {
-	// must be a tar file
-	options := types.CopyToContainerOptions{
-		AllowOverwriteDirWithFile: override,
-		CopyUIDGID:                true,
-	}
-	_, err := c.execContainerPrivileged(containerId, fmt.Sprintf("mkdir -p %s", dstPath))
-	if err != nil {
-		return err
-	}
-	file, err := os.OpenFile(srcFile, os.O_RDONLY, 0600)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-	return c.client.CopyToContainer(c.Ctx, containerId, dstPath, file, options)
-}
-func (c *Client) execContainerPrivileged(containerId, command string) (output string, err error) {
-	return c.execContainerWithConf(containerId, command, types.ExecConfig{
-		AttachStderr: true,
-		AttachStdout: true,
-		Cmd:          []string{"sh", "-c", command},
-		Privileged:   true,
-		User:         "root",
-	})
-}
-
-//execContainer with command which does not contain "sh -c" in the target container
-func (c *Client) execContainerWithConf(containerId, command string, config types.ExecConfig) (output string, err error) {
-	logrus.Infof("execute command: %s", strings.Join(config.Cmd, " "))
-	ctx := context.Background()
-	id, err := c.client.ContainerExecCreate(ctx, containerId, config)
-	if err != nil {
-		logrus.Warningf("Create exec for container: %s, err: %s", containerId, err.Error())
-		return "", err
-	}
-	resp, err := c.client.ContainerExecAttach(ctx, id.ID, types.ExecStartCheck{})
-	if err != nil {
-		logrus.Warningf("Attach exec for container: %s, err: %s", containerId, err.Error())
-		return "", err
-	}
-	defer resp.Close()
-	stdout := new(bytes.Buffer)
-	stderr := new(bytes.Buffer)
-	_, err = stdcopy.StdCopy(stdout, stderr, resp.Reader)
-	if err != nil {
-		logrus.Warningf("Attach exec for container: %s, err: %s", containerId, err.Error())
-		return "", err
-	}
-	result := stdout.String()
-	errorMsg := stderr.String()
-	logrus.Debugf("execute result: %s, error msg: %s", result, errorMsg)
-	if errorMsg != "" {
-		return "", fmt.Errorf(errorMsg)
-	} else {
-		return result, nil
-	}
-}
-
-func (c *Client) ExecContainer(containerId, command string) (output string, err error) {
-	return c.execContainerWithConf(containerId, command, types.ExecConfig{
-		AttachStderr: true,
-		AttachStdout: true,
-		Cmd:          []string{"sh", "-c", command},
-	})
-}
-
-func (c *Client) ExecContainerPrivileged(containerId, command string) (output string, err error) {
-	return c.execContainerWithConf(containerId, command, types.ExecConfig{
-		AttachStderr: true,
-		AttachStdout: true,
-		Cmd:          []string{"sh", "-c", command},
-		Privileged:   true,
-		User:         "root",
-	})
-}
-
 //ExecuteAndRemove: create and start a container for executing a command, and remove the container
-func (c *Client) ExecuteAndRemove(config *containertype.Config, hostConfig *containertype.HostConfig,
-	networkConfig *network.NetworkingConfig, containerName string, removed bool, timeout time.Duration,
+func (c *Client) ExecuteAndRemove(ctx context.Context, config *containertype.Config, hostConfig *containertype.HostConfig,
+	networkConfig *network.NetworkingConfig, containerName string, removed bool,
+	timeout time.Duration,
 	command string, containerInfo container.ContainerInfo) (containerId string, output string, err error, code int32) {
 
-	logrus.Debugf("command: '%s', image: %s, containerName: %s", command, config.Image, containerName)
+	log.Debugf(ctx, "command: '%s', image: %s, containerName: %s", command, config.Image, containerName)
 	// check image exists or not
-	_, err = c.getImageByRef(config.Image)
+	_, err = c.getImageByRef(ctx, config.Image)
 	if err != nil {
 		// pull image if not exists
 		_, err := c.pullImage(config.Image)
@@ -265,39 +193,39 @@ func (c *Client) ExecuteAndRemove(config *containertype.Config, hostConfig *cont
 			return "", "", fmt.Errorf(spec.ImagePullFailed.Sprintf(config.Image, err)), spec.ImagePullFailed.Code
 		}
 	}
-	containerId, err = c.createAndStartContainer(config, hostConfig, networkConfig, containerName)
+	containerId, err = c.createAndStartContainer(ctx, config, hostConfig, networkConfig, containerName)
 	if err != nil {
-		c.RemoveContainer(containerId, true)
+		c.RemoveContainer(ctx, containerId, true)
 		return containerId, "", fmt.Errorf(spec.ContainerExecFailed.Sprintf("CreateAndStartContainer", err)), spec.ContainerExecFailed.Code
 	}
 
-	output, err = c.ExecContainer(containerId, command)
+	output, err = c.ExecContainer(ctx, containerId, command)
 	if err != nil {
 		if removed {
-			c.RemoveContainer(containerId, true)
+			c.RemoveContainer(ctx, containerId, true)
 		}
 		return containerId, "", fmt.Errorf(spec.ContainerExecFailed.Sprintf("ContainerExecCmd", err)), spec.ContainerExecFailed.Code
 	}
-	logrus.Infof("Execute output in container: %s", output)
+	log.Infof(ctx, "Execute output in container: %s", output)
 	if removed {
-		c.RemoveContainer(containerId, true)
+		c.RemoveContainer(ctx, containerId, true)
 	}
 	return containerId, output, nil, spec.OK.Code
 }
 
 //ImageExists
-func (c *Client) getImageByRef(ref string) (types.ImageSummary, error) {
+func (c *Client) getImageByRef(ctx context.Context, ref string) (types.ImageSummary, error) {
 	args := filters.NewArgs(filters.Arg("reference", ref))
 	list, err := c.client.ImageList(context.Background(), types.ImageListOptions{
 		All:     false,
 		Filters: args,
 	})
 	if err != nil {
-		logrus.Warningf("Get image by name failed. name: %s, err: %s", ref, err)
+		log.Warnf(ctx, "Get image by name failed. name: %s, err: %s", ref, err)
 		return types.ImageSummary{}, err
 	}
 	if len(list) == 0 {
-		logrus.Warningf("Cannot find the image by name: %s", ref)
+		log.Warnf(ctx, "Cannot find the image by name: %s", ref)
 		return types.ImageSummary{}, errors.New("image not found")
 	}
 	return list[0], nil
@@ -315,23 +243,23 @@ func (c *Client) pullImage(ref string) (string, error) {
 }
 
 //createAndStartContainer
-func (c *Client) createAndStartContainer(config *containertype.Config, hostConfig *containertype.HostConfig,
+func (c *Client) createAndStartContainer(ctx context.Context, config *containertype.Config, hostConfig *containertype.HostConfig,
 	networkConfig *network.NetworkingConfig, containerName string) (string, error) {
 	body, err := c.client.ContainerCreate(context.Background(), config, hostConfig, networkConfig, containerName)
 	if err != nil {
-		logrus.Warningf("Create container: %s, err: %s", containerName, err.Error())
+		log.Warnf(ctx, "Create container: %s, err: %s", containerName, err.Error())
 		return "", err
 	}
 	containerId := body.ID
-	err = c.startContainer(containerId)
+	err = c.startContainer(ctx, containerId)
 	return containerId, err
 }
 
 //startContainer
-func (c *Client) startContainer(containerId string) error {
+func (c *Client) startContainer(ctx context.Context, containerId string) error {
 	err := c.client.ContainerStart(context.Background(), containerId, types.ContainerStartOptions{})
 	if err != nil {
-		logrus.Warningf("Start container: %s, err: %s", containerId, err.Error())
+		log.Warnf(ctx, "Start container: %s, err: %s", containerId, err.Error())
 		return err
 	}
 	return nil

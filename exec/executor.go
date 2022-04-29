@@ -19,29 +19,25 @@ package exec
 import (
 	"context"
 	"fmt"
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"strings"
 
-	"github.com/chaosblade-io/chaosblade-spec-go/spec"
-	"github.com/chaosblade-io/chaosblade-spec-go/util"
-
 	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container"
-	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container/containerd"
-	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container/docker"
+	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 )
-
-const DstChaosBladeDir = "/opt"
 
 // BladeBin is the blade path in the chaosblade-tool image
 const BladeBin = "/opt/chaosblade/blade"
+const DstChaosBladeDir = "/opt"
 
-// BaseDockerClientExecutor
-type BaseDockerClientExecutor struct {
+// BaseClientExecutor
+type BaseClientExecutor struct {
 	Client      container.Container
 	CommandFunc func(uid string, ctx context.Context, model *spec.ExpModel) string
 }
 
 // SetClient to the executor
-func (b *BaseDockerClientExecutor) SetClient(expModel *spec.ExpModel) error {
+func (b *BaseClientExecutor) SetClient(expModel *spec.ExpModel) error {
 	cli, err := GetClientByRuntime(expModel)
 	if err != nil {
 		return err
@@ -51,7 +47,7 @@ func (b *BaseDockerClientExecutor) SetClient(expModel *spec.ExpModel) error {
 }
 
 // commonFunc is the command created function
-var commonFunc = func(uid string, ctx context.Context, model *spec.ExpModel) string {
+var CommonFunc = func(uid string, ctx context.Context, model *spec.ExpModel) string {
 	matchers := spec.ConvertExpMatchersToString(model, func() map[string]spec.Empty {
 		return GetAllDockerFlagNames()
 	})
@@ -78,36 +74,25 @@ func ConvertContainerOutputToResponse(output string, err error, defaultResponse 
 	return spec.Decode(output, defaultResponse)
 }
 
-func GetClientByRuntime(expModel *spec.ExpModel) (container.Container, error) {
-	switch expModel.ActionFlags[ContainerRuntime.Name] {
-	case container.ContainerdRuntime:
-		return containerd.NewClient(expModel.ActionFlags[EndpointFlag.Name], expModel.ActionFlags[ContainerNamespace.Name])
-	default:
-		return docker.NewClient(expModel.ActionFlags[EndpointFlag.Name])
-		//default:
-		//	return nil,errors.New(fmt.Sprintf("`%s`, the container runtime not support", expModel.ActionFlags[ContainerRuntime.Name]))
-	}
-}
-
 // GetContainer return container by container flag, such as container id or container name.
-func GetContainer(client container.Container, uid string, containerId, containerName string, containerLabelSelector map[string]string) (container.ContainerInfo, *spec.Response) {
-	if containerId == "" && containerName == "" && containerLabelSelector == nil {
-		tips := fmt.Sprintf("%s or %s or %s", ContainerIdFlag.Name, ContainerNameFlag.Name, ContainerLabelSelectorFlag.Name)
-		util.Errorf(uid, util.GetRunFuncName(), spec.ParameterLess.Sprintf(tips))
+func GetContainer(ctx context.Context, client container.Container, uid string, containerId, containerName string, containerLabelSelector map[string]string) (container.ContainerInfo, *spec.Response) {
+	if containerId == "" && containerName == "" {
+		tips := fmt.Sprintf("%s or %s", ContainerIdFlag.Name, ContainerNameFlag.Name, ContainerLabelSelectorFlag.Name)
+		log.Errorf(ctx, spec.ParameterLess.Sprintf(tips))
 		return container.ContainerInfo{}, spec.ResponseFailWithFlags(spec.ParameterLess, tips)
 	}
 	var container container.ContainerInfo
 	var code int32
 	var err error
 	if containerId != "" {
-		container, err, code = client.GetContainerById(containerId)
+		container, err, code = client.GetContainerById(ctx, containerId)
 	} else if containerName != "" {
-		container, err, code = client.GetContainerByName(containerName)
+		container, err, code = client.GetContainerByName(ctx, containerName)
 	} else {
 		container, err, code = client.GetContainerByLabelSelector(containerLabelSelector)
 	}
 	if err != nil {
-		util.Errorf(uid, util.GetRunFuncName(), err.Error())
+		log.Errorf(ctx, err.Error())
 		return container, spec.ResponseFail(code, err.Error(), nil)
 	}
 	return container, spec.ReturnSuccess(container)

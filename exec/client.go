@@ -18,12 +18,12 @@ package exec
 
 import (
 	"context"
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"io/ioutil"
 	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/sirupsen/logrus"
 )
 
 var cli *Client
@@ -33,14 +33,14 @@ type Client struct {
 }
 
 // waitAndGetOutput returns the result
-func (c *Client) waitAndGetOutput(containerId string) (string, error) {
+func (c *Client) waitAndGetOutput(ctx context.Context, containerId string) (string, error) {
 	containerWait()
 	resp, err := c.client.ContainerLogs(context.Background(), containerId, types.ContainerLogsOptions{
 		ShowStderr: true,
 		ShowStdout: true,
 	})
 	if err != nil {
-		logrus.Warningf("Get container: %s log err: %s", containerId, err)
+		log.Warnf(ctx, "Get container: %s log err: %s", containerId, err)
 		return "", err
 	}
 	defer resp.Close()
