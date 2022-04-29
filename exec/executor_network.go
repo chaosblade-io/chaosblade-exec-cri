@@ -73,10 +73,7 @@ func (r *NetworkExecutor) Exec(uid string, ctx context.Context, expModel *spec.E
 	}
 
 	for k, v := range expModel.ActionFlags {
-		if v == "" {
-			continue
-		}
-		if m[k] != "" {
+		if v == "" || m[k] != "" || k == "timeout" {
 			continue
 		}
 		flags = fmt.Sprintf("%s --%s=%s", flags, k, v)
