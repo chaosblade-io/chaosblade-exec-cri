@@ -88,11 +88,11 @@ func CopyToContainer(ctx context.Context, pid uint32, srcFile, dstPath, extractD
 
 func ExecContainer(ctx context.Context, pid int32, command string) (output string, err error) {
 
-	args := fmt.Sprintf("-t %d -p -m -- /bin/sh -c", pid)
+	args := fmt.Sprintf("-t %d -p -m -n -- /bin/sh -c", pid)
 	argsArray := strings.Split(args, " ")
 	nsbin := path.Join(util.GetProgramPath(), "bin", spec.NSExecBin)
 
-	log.Infof(ctx, "cxec container cmd: %s %s ", nsbin, args, command)
+	log.Infof(ctx, "cxec container cmd: %s %s %s", nsbin, args, command)
 
 	cmd := exec.Command(nsbin, append(argsArray, command)...)
 
