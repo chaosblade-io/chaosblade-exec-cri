@@ -482,6 +482,7 @@ func GetNSExecFlags() []spec.ExpFlagSpec {
 		EndpointFlag,
 		ContainerRuntime,
 		ContainerNamespace,
+		ContainerLabelSelectorFlag,
 	}
 }
 
