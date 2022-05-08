@@ -33,12 +33,13 @@ func NewCriExpModelSpec() *DockerExpModelSpec {
 		newMemCommandModelSpecForDocker(),
 		newFileCommandSpecForDocker(),
 		newProcessCommandModelSpecForDocker(),
+		newNetworkDnsModelSpecForDocker(),
 	}
 	spec.AddExecutorToModelSpec(NewCommonExecutor(), commonModelSpec...)
 	spec.AddFlagsToModelSpec(GetNSExecFlags, commonModelSpec...)
 
 	// network
-	networkModeSpec := newNetworkCommandModelSpecForDocker()
+	networkModeSpec := newNetworkNetModelSpecForDocker()
 	spec.AddExecutorToModelSpec(NewNetworkExecutor(), networkModeSpec)
 	spec.AddFlagsToModelSpec(GetNSExecFlags, networkModeSpec)
 
@@ -76,7 +77,7 @@ func NewDockerExpModelSpec() *DockerExpModelSpec {
 	spec.AddFlagsToModelSpec(GetNSExecFlags, commonModelSpec...)
 
 	// network
-	networkModeSpec := newNetworkCommandModelSpecForDocker()
+	networkModeSpec := newNetworkNetModelSpecForDocker()
 	spec.AddExecutorToModelSpec(NewNetworkExecutor(), networkModeSpec)
 	spec.AddFlagsToModelSpec(GetNSExecFlags, networkModeSpec)
 
