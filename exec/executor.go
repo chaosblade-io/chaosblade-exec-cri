@@ -76,8 +76,8 @@ func ConvertContainerOutputToResponse(output string, err error, defaultResponse 
 
 // GetContainer return container by container flag, such as container id or container name.
 func GetContainer(ctx context.Context, client container.Container, uid string, containerId, containerName string, containerLabelSelector map[string]string) (container.ContainerInfo, *spec.Response) {
-	if containerId == "" && containerName == "" {
-		tips := fmt.Sprintf("%s or %s", ContainerIdFlag.Name, ContainerNameFlag.Name, ContainerLabelSelectorFlag.Name)
+	if containerId == "" && containerName == "" && len(containerLabelSelector) == 0 {
+		tips := fmt.Sprintf("%s or %s or %s", ContainerIdFlag.Name, ContainerNameFlag.Name, ContainerLabelSelectorFlag.Name)
 		log.Errorf(ctx, spec.ParameterLess.Sprintf(tips))
 		return container.ContainerInfo{}, spec.ResponseFailWithFlags(spec.ParameterLess, tips)
 	}
