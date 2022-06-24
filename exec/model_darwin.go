@@ -25,7 +25,7 @@ func NewCriExpModelSpec() *DockerExpModelSpec {
 		ScopeName:     "cri",
 		ExpModelSpecs: make(map[string]spec.ExpModelCommandSpec, 0),
 	}
-	networkCommandModelSpec := newNetworkNetModelSpecForDocker()
+	networkCommandModelSpec := newNetworkCommandModelSpecForDocker()
 	execSidecarModelSpecs := []spec.ExpModelCommandSpec{
 		networkCommandModelSpec,
 	}
@@ -58,7 +58,7 @@ func NewDockerExpModelSpec() *DockerExpModelSpec {
 		ScopeName:     "docker",
 		ExpModelSpecs: make(map[string]spec.ExpModelCommandSpec, 0),
 	}
-	networkCommandModelSpec := newNetworkNetModelSpecForDocker()
+	networkCommandModelSpec := newNetworkCommandModelSpecForDocker()
 	execSidecarModelSpecs := []spec.ExpModelCommandSpec{
 		networkCommandModelSpec,
 	}
