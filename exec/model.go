@@ -37,56 +37,11 @@ type ResourceExpModelSpec interface {
 	GetExpActionModelSpec(target, action string) spec.ExpActionCommandSpec
 }
 
-func newNetworkDnsModelSpecForDocker() spec.ExpModelCommandSpec {
-
-	networkCommandModelSpec := &network.NetworkCommandSpec{
-		spec.BaseExpModelCommandSpec{
-			ExpActions: []spec.ExpActionCommandSpec{
-				network.NewDnsActionSpec(),
-			},
-			ExpFlags: []spec.ExpFlagSpec{},
-		},
-	}
+func newNetworkCommandModelSpecForDocker() spec.ExpModelCommandSpec {
+	networkCommandModelSpec := network.NewNetworkCommandSpec()
 	for _, action := range networkCommandModelSpec.Actions() {
 		v := interface{}(action)
 		switch v.(type) {
-		case *network.DnsActionSpec:
-			action.SetExample(
-				`# The domain name www.baidu.com is not accessible
-blade create cri network dns --domain www.baidu.com --ip 10.0.0.0 --container-id ee54f1e61c08`)
-		}
-	}
-	return networkCommandModelSpec
-}
-
-func newNetworkNetModelSpecForDocker() spec.ExpModelCommandSpec {
-	networkCommandModelSpec := &network.NetworkCommandSpec{
-		spec.BaseExpModelCommandSpec{
-			ExpActions: []spec.ExpActionCommandSpec{
-				tc.NewDelayActionSpec(),
-				network.NewDropActionSpec(),
-				tc.NewLossActionSpec(),
-				tc.NewDuplicateActionSpec(),
-				tc.NewCorruptActionSpec(),
-				tc.NewReorderActionSpec(),
-				network.NewOccupyActionSpec(),
-			},
-			ExpFlags: []spec.ExpFlagSpec{},
-		},
-	}
-	for _, action := range networkCommandModelSpec.Actions() {
-		v := interface{}(action)
-		switch v.(type) {
-		case *network.DropActionSpec:
-			action.SetExample(
-				`# Block incoming connection from the port 80
-blade create cri network drop --source-port 80 --network-traffic in --container-id ee54f1e61c08`)
-		case *network.OccupyActionSpec:
-			action.SetExample(`#Specify port 8080 occupancy
-blade create cri network occupy --port 8080 --force --container-id ee54f1e61c08
-
-# The machine accesses external 14.215.177.39 machine (ping www.baidu.com) 80 port packet loss rate 100%
-blade create cri network loss --percent 100 --interface eth0 --remote-port 80 --destination-ip 14.215.177.39 --container-id ee54f1e61c08`)
 		case *tc.DelayActionSpec:
 			action.SetExample(
 				`# Access to native 8080 and 8081 ports is delayed by 3 seconds, and the delay time fluctuates by 1 second
@@ -97,6 +52,14 @@ blade create cri network delay --time 3000 --interface eth0 --remote-port 80 --d
 
 # Do a 5 second delay for the entire network card eth0, excluding ports 22 and 8000 to 8080
 blade create cri network delay --time 5000 --interface eth0 --exclude-port 22,8000-8080 --container-id ee54f1e61c08`)
+		case *network.DropActionSpec:
+			action.SetExample(
+				`# Block incoming connection from the port 80
+blade create cri network drop --source-port 80 --network-traffic in --container-id ee54f1e61c08`)
+		case *network.DnsActionSpec:
+			action.SetExample(
+				`# The domain name www.baidu.com is not accessible
+blade create cri network dns --domain www.baidu.com --ip 10.0.0.0 --container-id ee54f1e61c08`)
 		case *tc.LossActionSpec:
 			action.SetExample(`# Access to native 8080 and 8081 ports lost 70% of packets
 blade create cri network loss --percent 70 --interface eth0 --local-port 8080,8081 --container-id ee54f1e61c08
@@ -118,6 +81,12 @@ blade create cri network corrupt --percent 80 --destination-ip 180.101.49.12 --i
 		case *tc.ReorderActionSpec:
 			action.SetExample(`# Access the specified IP request packet disorder
 blade create cri network reorder --correlation 80 --percent 50 --gap 2 --time 500 --interface eth0 --destination-ip 180.101.49.12 --container-id ee54f1e61c08`)
+		case *network.OccupyActionSpec:
+			action.SetExample(`#Specify port 8080 occupancy
+blade create cri network occupy --port 8080 --force --container-id ee54f1e61c08
+
+# The machine accesses external 14.215.177.39 machine (ping www.baidu.com) 80 port packet loss rate 100%
+blade create cri network loss --percent 100 --interface eth0 --remote-port 80 --destination-ip 14.215.177.39 --container-id ee54f1e61c08`)
 		}
 	}
 	return networkCommandModelSpec

@@ -33,15 +33,20 @@ func NewCriExpModelSpec() *DockerExpModelSpec {
 		newMemCommandModelSpecForDocker(),
 		newFileCommandSpecForDocker(),
 		newProcessCommandModelSpecForDocker(),
-		newNetworkDnsModelSpecForDocker(),
 	}
 	spec.AddExecutorToModelSpec(NewCommonExecutor(), commonModelSpec...)
 	spec.AddFlagsToModelSpec(GetNSExecFlags, commonModelSpec...)
 
 	// network
-	networkModeSpec := newNetworkNetModelSpecForDocker()
+	networkModeSpec := newNetworkCommandModelSpecForDocker()
 	spec.AddExecutorToModelSpec(NewNetworkExecutor(), networkModeSpec)
 	spec.AddFlagsToModelSpec(GetNSExecFlags, networkModeSpec)
+
+	for _, action := range networkModeSpec.Actions() {
+		if action.Name() == "dns" {
+			action.SetExecutor(NewCommonExecutor());
+		}
+	}
 
 	// copy
 	execInContainerModelSpecs := getJvmModels()
@@ -73,13 +78,20 @@ func NewDockerExpModelSpec() *DockerExpModelSpec {
 		newFileCommandSpecForDocker(),
 		newProcessCommandModelSpecForDocker(),
 	}
+
 	spec.AddExecutorToModelSpec(NewCommonExecutor(), commonModelSpec...)
 	spec.AddFlagsToModelSpec(GetNSExecFlags, commonModelSpec...)
 
 	// network
-	networkModeSpec := newNetworkNetModelSpecForDocker()
+	networkModeSpec := newNetworkCommandModelSpecForDocker()
 	spec.AddExecutorToModelSpec(NewNetworkExecutor(), networkModeSpec)
 	spec.AddFlagsToModelSpec(GetNSExecFlags, networkModeSpec)
+
+	for _, action := range networkModeSpec.Actions() {
+		if action.Name() == "dns" {
+			action.SetExecutor(NewCommonExecutor());
+		}
+	}
 
 	// copy
 	execInContainerModelSpecs := getJvmModels()
