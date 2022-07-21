@@ -54,7 +54,7 @@ func getModels(scope string) *spec.Models {
 	}
 
 	for _, modelSpec := range modelSpecs.ExpModels() {
-		model := util.ConvertSpecToModels(modelSpec, spec.ExpPrepareModel{}, modelSpec.Scope())
+		model := util.ConvertSpecToModels(modelSpec, spec.ExpPrepareModel{}, modelSpecs.ScopeName)
 		models = append(models, model)
 	}
 	return util.MergeModels(models...)
