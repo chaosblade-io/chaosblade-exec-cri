@@ -19,9 +19,6 @@ BUILD_IMAGE_PATH=build/image/blade
 CRI_OS_YAML_FILE_NAME=chaosblade-cri-spec-$(BLADE_VERSION).yaml
 CRI_OS_YAML_FILE_PATH=$(BUILD_TARGET_YAML)/$(CRI_OS_YAML_FILE_NAME)
 
-DOCKER_OS_YAML_FILE_NAME=chaosblade-docker-spec-$(BLADE_VERSION).yaml
-DOCKER_OS_YAML_FILE_PATH=$(BUILD_TARGET_YAML)/$(DOCKER_OS_YAML_FILE_NAME)
-
 CHAOSBLADE_PATH=build/cache/chaosblade
 
 ifeq ($(GOOS), linux)
@@ -38,7 +35,6 @@ pre_build:
 
 build_yaml: build/spec.go
 	$(GO) run $< $(CRI_OS_YAML_FILE_PATH) cri $(CHAOSBLADE_PATH)/yaml/chaosblade-jvm-spec-$(BLADE_VERSION).yaml
-	$(GO) run $< $(DOCKER_OS_YAML_FILE_PATH) docker $(CHAOSBLADE_PATH)/yaml/chaosblade-jvm-spec-$(BLADE_VERSION).yaml
 
 # test
 test:
