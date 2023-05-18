@@ -78,6 +78,11 @@ func (r *CommonExecutor) Exec(uid string, ctx context.Context, expModel *spec.Ex
         m[f.FlagName()] = f.FlagName()
     }
 
+    cgroupRoot := os.Getenv("CGROUP_ROOT")
+    if cgroupRoot != "" {
+        expModel.ActionFlags["cgroup-root"] = cgroupRoot
+    }
+
     for k, v := range expModel.ActionFlags {
         if v == "" || m[k] != "" || k == "timeout" {
             continue
@@ -139,14 +144,17 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
     command := exec.CommandContext(ctx, bin, argsArray...)
     command.SysProcAttr = &syscall.SysProcAttr{}
 
-    root := expModel.ActionFlags["cgroup-root"]
-    if root == "" {
-        root = "/sys/fs/cgroup/"
+    cgroupRoot := os.Getenv("CGROUP_ROOT")
+    if cgroupRoot == "" {
+        cgroupRoot = expModel.ActionFlags["cgroup-root"]
+        if cgroupRoot == "" {
+            cgroupRoot = "/sys/fs/cgroup/"
+        }
     }
 
-    log.Debugf(ctx, "cgroup root path %s", root)
+    log.Debugf(ctx, "cgroup root path %s", cgroupRoot)
 
-    control, err := cgroups.Load(osexec.Hierarchy(root), osexec.PidPath(int(pid)))
+    control, err := cgroups.Load(osexec.Hierarchy(cgroupRoot), osexec.PidPath(int(pid)))
     if err != nil {
         sprintf := fmt.Sprintf("cgroups load failed, %s", err.Error())
         return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
