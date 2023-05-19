@@ -79,7 +79,7 @@ func (r *CommonExecutor) Exec(uid string, ctx context.Context, expModel *spec.Ex
     }
 
     cgroupRoot := os.Getenv("CGROUP_ROOT")
-    if cgroupRoot != "" {
+    if cgroupRoot != "" && expModel.ActionProcessHang {
         expModel.ActionFlags["cgroup-root"] = cgroupRoot
     }
 
