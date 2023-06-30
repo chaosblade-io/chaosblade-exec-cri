@@ -1,12 +1,20 @@
 package container
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"os"
+	"os/exec"
+	"path"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
+	"github.com/chaosblade-io/chaosblade-spec-go/util"
 	containertype "github.com/docker/docker/api/types/container"
 	cri "k8s.io/cri-api/pkg/apis"
 	v1 "k8s.io/cri-api/pkg/apis/runtime/v1"
@@ -19,12 +27,7 @@ type Client struct {
 
 const verbose = false
 
-func (c *Client) GetPidById(ctx context.Context, containerId string) (int32, error, int32) {
-	runtimeService, err := GetRuntimeService(ctx, c.endpoint, c.timeout)
-	if err != nil {
-		return -1, fmt.Errorf(spec.ContainerExecFailed.Sprintf("GetRuntimeService", err.Error())), spec.ContainerExecFailed.Code
-	}
-
+func (c *Client) GetPidById(ctx context.Context, runtimeService cri.RuntimeService, containerId string) (int32, error, int32) {
 	r, err := runtimeService.ContainerStatus(ctx, containerId, verbose)
 	if err != nil {
 		return 0, nil, 0
@@ -92,7 +95,70 @@ func (c *Client) RemoveContainer(ctx context.Context, runtimeService cri.Runtime
 //
 //}
 func (c *Client) CopyToContainer(ctx context.Context, runtimeService cri.RuntimeService, containerId, srcFile, dstPath, extractDirName string, override bool) error {
-	// todo 是否可用exec 输入
+	pid, err, _ := c.GetPidById(ctx, runtimeService, containerId)
+	if err != nil {
+		log.Warnf(ctx,"[COPY TO CONTAINER] get pid by contaienrId: %s, err: %s", containerId, err.Error())
+		return err
+	}
+
+	args := fmt.Sprintf("-t %d -p -m -- /bin/sh -c", pid)
+	argsArray := strings.Split(args, " ")
+	nsbin := path.Join(util.GetProgramPath(), "bin", spec.NSExecBin)
+
+	command := fmt.Sprintf("cat > %s", path.Join(dstPath, path.Base(srcFile)))
+	log.Infof(ctx, "[COPY TO CONTAINER] run copy cmd: %s %s %s", nsbin, args, command)
+
+	cmd := exec.Command(nsbin, append(argsArray, command)...)
+	cmd.Env = []string{"PATH=$PATH:/bin"}
+
+	var outMsg bytes.Buffer
+	var errMsg bytes.Buffer
+	cmd.Stdout = &outMsg
+	cmd.Stderr = &errMsg
+
+	open, err := os.Open(srcFile)
+	defer open.Close()
+	if err != nil {
+		log.Warnf(ctx, "[COPY TO CONTAINER] failed, open %s file failed, err: %v", srcFile, err)
+		return err
+	}
+	cmd.Stdin = open
+	if err = cmd.Start(); err != nil {
+		log.Warnf(ctx, "[COPY TO CONTAINER] failed, copy start, err: %v", err)
+		return err
+	}
+	if err = cmd.Wait(); err != nil {
+		log.Warnf(ctx, "[COPY TO CONTAINER] failed, copy wait, err: %v", err)
+		return err
+	}
+	log.Debugf(ctx, "[COPY TO CONTAINER] Command Result, output: %s, errMsg: %s", outMsg.String(), errMsg.String())
+
+	if errMsg.Len() != 0 {
+		return errors.New(errMsg.String())
+	}
+
+	// tar -zxf
+	command = fmt.Sprintf("-t %d -p -m -- tar -zxf %s -C %s", pid, path.Join(dstPath, path.Base(srcFile)), dstPath)
+	log.Infof(ctx, "run tar cmd: %s %s", nsbin, command)
+	cmd = exec.Command(nsbin, strings.Split(command, " ")...)
+	cmd.Env = []string{"PATH=$PATH:/bin"}
+	//
+	var outMsg2 bytes.Buffer
+	var errMsg2 bytes.Buffer
+	cmd.Stdout = &outMsg2
+	cmd.Stderr = &errMsg2
+	err = cmd.Run()
+	log.Debugf(ctx, "Tar Command Result, output: %s, errMsg: %s,  err: %v", outMsg2.String(), errMsg2.String(), err)
+
+	if err != nil {
+		return err
+	}
+
+	if errMsg2.Len() != 0 {
+		return errors.New(errMsg2.String())
+	}
+
+	return nil
 }
 func (c *Client) ExecContainer(ctx context.Context, runtimeService cri.RuntimeService, containerId, command string) (output string, err error) {
 	req := &v1.ExecRequest{
@@ -103,11 +169,30 @@ func (c *Client) ExecContainer(ctx context.Context, runtimeService cri.RuntimeSe
 		Stdout:      true,
 		Stderr:      true,
 	}
-	runtimeService.Exec(ctx, req)
+	execResponse, err := runtimeService.Exec(ctx, req)
+	if err != nil {
+		return "", err
+	}
+	return execResponse.String(), nil
 
 }
-func (c *Client) ExecuteAndRemove(ctx context.Context, config *containertype.Config, hostConfig *containertype.HostConfig,
+func (c *Client) ExecuteAndRemove(ctx context.Context, runtimeService cri.RuntimeService, config *containertype.Config, hostConfig *containertype.HostConfig,
 	func (c *Client) networkConfig *network.NetworkingConfig, containerName string, removed bool, timeout time.Duration,
 	func (c *Client) command string, containerInfo ContainerInfo) (containerId string, output string, err error, code int32) {
+strings.HasSuffix()
+	// 1. create sidecar container
+	runtimeService.CreateContainer(ctx, runtimeService)
 
+
+	// 2. exec command in sidecar container
+
+
+
+	// 3. remove sidecar container
+
+}
+
+func (c *Client) CreateContainer(ctx context.Context, runtimeService cri.RuntimeService, imageService cri.ImageManagerService) (string, error) {
+	runtimeService.CreateContainer(ctx, )
+	runtimeService.RunPodSandbox()
 }
