@@ -19,7 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"time"
 
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
@@ -41,7 +41,7 @@ type Client struct {
 	Ctx    context.Context
 }
 
-//GetClient returns the docker client
+// GetClient returns the docker client
 func NewClient(endpoint string) (*Client, error) {
 	var oldClient *client.Client
 	if cli != nil {
@@ -58,7 +58,7 @@ func NewClient(endpoint string) (*Client, error) {
 	return cli, nil
 }
 
-//checkAndCreateClient
+// checkAndCreateClient
 func checkAndCreateClient(endpoint string, cli *client.Client) (*client.Client, error) {
 	if cli == nil {
 		var err error
@@ -119,7 +119,7 @@ func (c *Client) GetContainerById(ctx context.Context, containerId string) (cont
 	return c.GetContainerFromDocker(option)
 }
 
-//getContainerByName returns the container object by container name
+// getContainerByName returns the container object by container name
 func (c *Client) GetContainerByName(ctx context.Context, containerName string) (container.ContainerInfo, error, int32) {
 	option := types.ContainerListOptions{
 		All: true,
@@ -165,7 +165,7 @@ func convertContainerInfo(container2 types.Container) container.ContainerInfo {
 	}
 }
 
-//RemoveContainer
+// RemoveContainer
 func (c *Client) RemoveContainer(ctx context.Context, containerId string, force bool) error {
 	err := c.client.ContainerRemove(context.Background(), containerId, types.ContainerRemoveOptions{
 		Force: force,
@@ -177,7 +177,7 @@ func (c *Client) RemoveContainer(ctx context.Context, containerId string, force 
 	return nil
 }
 
-//ExecuteAndRemove: create and start a container for executing a command, and remove the container
+// ExecuteAndRemove: create and start a container for executing a command, and remove the container
 func (c *Client) ExecuteAndRemove(ctx context.Context, config *containertype.Config, hostConfig *containertype.HostConfig,
 	networkConfig *network.NetworkingConfig, containerName string, removed bool,
 	timeout time.Duration,
@@ -213,7 +213,7 @@ func (c *Client) ExecuteAndRemove(ctx context.Context, config *containertype.Con
 	return containerId, output, nil, spec.OK.Code
 }
 
-//ImageExists
+// ImageExists
 func (c *Client) getImageByRef(ctx context.Context, ref string) (types.ImageSummary, error) {
 	args := filters.NewArgs(filters.Arg("reference", ref))
 	list, err := c.client.ImageList(context.Background(), types.ImageListOptions{
@@ -231,18 +231,18 @@ func (c *Client) getImageByRef(ctx context.Context, ref string) (types.ImageSumm
 	return list[0], nil
 }
 
-//PullImage
+// PullImage
 func (c *Client) pullImage(ref string) (string, error) {
 	reader, err := c.client.ImagePull(context.Background(), ref, types.ImagePullOptions{})
 	if err != nil {
 		return "", err
 	}
 	defer reader.Close()
-	bytes, err := ioutil.ReadAll(reader)
+	bytes, err := io.ReadAll(reader)
 	return string(bytes), nil
 }
 
-//createAndStartContainer
+// createAndStartContainer
 func (c *Client) createAndStartContainer(ctx context.Context, config *containertype.Config, hostConfig *containertype.HostConfig,
 	networkConfig *network.NetworkingConfig, containerName string) (string, error) {
 	body, err := c.client.ContainerCreate(context.Background(), config, hostConfig, networkConfig, containerName)
@@ -255,7 +255,7 @@ func (c *Client) createAndStartContainer(ctx context.Context, config *containert
 	return containerId, err
 }
 
-//startContainer
+// startContainer
 func (c *Client) startContainer(ctx context.Context, containerId string) error {
 	err := c.client.ContainerStart(context.Background(), containerId, types.ContainerStartOptions{})
 	if err != nil {
