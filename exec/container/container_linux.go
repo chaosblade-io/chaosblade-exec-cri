@@ -20,13 +20,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/chaosblade-io/chaosblade-spec-go/log"
-	"github.com/chaosblade-io/chaosblade-spec-go/spec"
-	"github.com/chaosblade-io/chaosblade-spec-go/util"
 	"os"
 	"os/exec"
 	"path"
 	"strings"
+
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
+	"github.com/chaosblade-io/chaosblade-spec-go/spec"
+	"github.com/chaosblade-io/chaosblade-spec-go/util"
 )
 
 func CopyToContainer(ctx context.Context, pid uint32, srcFile, dstPath, extractDirName string, override bool) error {
@@ -36,7 +37,7 @@ func CopyToContainer(ctx context.Context, pid uint32, srcFile, dstPath, extractD
 	nsbin := path.Join(util.GetProgramPath(), "bin", spec.NSExecBin)
 
 	command := fmt.Sprintf("cat > %s", path.Join(dstPath, path.Base(srcFile)))
-	log.Infof(ctx, "run copy cmd: ", nsbin, args, command)
+	log.Infof(ctx, "run copy cmd: %s %s %s", nsbin, args, command)
 
 	cmd := exec.Command(nsbin, append(argsArray, command)...)
 
@@ -46,18 +47,16 @@ func CopyToContainer(ctx context.Context, pid uint32, srcFile, dstPath, extractD
 	cmd.Stderr = &errMsg
 
 	open, err := os.Open(srcFile)
-	defer open.Close()
 	if err != nil {
 		return err
 	}
+	defer open.Close()
 	cmd.Stdin = open
-	if err := cmd.Start(); err != nil {
+	err = cmd.Run()
+	log.Debugf(ctx, "Command Result, output: %s, errMsg: %s,  err: %v", outMsg.String(), errMsg.String(), err)
+	if err != nil {
 		return err
 	}
-	if err := cmd.Wait(); err != nil {
-		return err
-	}
-	log.Debugf(ctx, "Command Result, output: %s, errMsg: %s", outMsg.String(), errMsg.String())
 
 	if errMsg.Len() != 0 {
 		return errors.New(errMsg.String())
@@ -73,8 +72,7 @@ func CopyToContainer(ctx context.Context, pid uint32, srcFile, dstPath, extractD
 	cmd.Stdout = &outMsg2
 	cmd.Stderr = &errMsg2
 	err = cmd.Run()
-	log.Debugf(ctx, "Tar Command Result, output: %s, errMsg: %s,  err: %v", outMsg.String(), errMsg.String(), err)
-
+	log.Debugf(ctx, "Tar Command Result, output: %s, errMsg: %s,  err: %v", outMsg2.String(), errMsg2.String(), err)
 	if err != nil {
 		return err
 	}
@@ -92,7 +90,7 @@ func ExecContainer(ctx context.Context, pid int32, command string) (output strin
 	argsArray := strings.Split(args, " ")
 	nsbin := path.Join(util.GetProgramPath(), "bin", spec.NSExecBin)
 
-	log.Infof(ctx, "cxec container cmd: %s %s %s", nsbin, args, command)
+	log.Infof(ctx, "exec container cmd: %s %s %s", nsbin, args, command)
 
 	cmd := exec.Command(nsbin, append(argsArray, command)...)
 
