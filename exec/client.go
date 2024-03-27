@@ -18,9 +18,10 @@ package exec
 
 import (
 	"context"
-	"github.com/chaosblade-io/chaosblade-spec-go/log"
-	"io/ioutil"
+	"io"
 	"time"
+
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -44,7 +45,7 @@ func (c *Client) waitAndGetOutput(ctx context.Context, containerId string) (stri
 		return "", err
 	}
 	defer resp.Close()
-	bytes, err := ioutil.ReadAll(resp)
+	bytes, err := io.ReadAll(resp)
 	return string(bytes), err
 }
 
@@ -56,13 +57,13 @@ func containerWait() error {
 	return nil
 }
 
-//GetImageInspectById
+// GetImageInspectById
 func (c *Client) getImageInspectById(imageId string) (types.ImageInspect, error) {
 	inspect, _, err := c.client.ImageInspectWithRaw(context.Background(), imageId)
 	return inspect, err
 }
 
-//DeleteImageByImageId
+// DeleteImageByImageId
 func (c *Client) deleteImageByImageId(imageId string) error {
 	_, err := c.client.ImageRemove(context.Background(), imageId, types.ImageRemoveOptions{
 		Force:         false,
