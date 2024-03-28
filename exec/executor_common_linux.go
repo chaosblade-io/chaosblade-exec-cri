@@ -17,244 +17,245 @@
 package exec
 
 import (
-    "context"
-    "fmt"
-    osexec "github.com/chaosblade-io/chaosblade-exec-os/exec"
-    "github.com/chaosblade-io/chaosblade-exec-os/exec/model"
-    "github.com/chaosblade-io/chaosblade-spec-go/log"
-    "github.com/chaosblade-io/chaosblade-spec-go/spec"
-    "github.com/chaosblade-io/chaosblade-spec-go/util"
-    "github.com/containerd/cgroups"
-    "io/ioutil"
-    "os"
-    "os/exec"
-    "path"
-    "strings"
-    "syscall"
-    "time"
+	"context"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"path"
+	"strings"
+	"syscall"
+	"time"
+
+	osexec "github.com/chaosblade-io/chaosblade-exec-os/exec"
+	"github.com/chaosblade-io/chaosblade-exec-os/exec/model"
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
+	"github.com/chaosblade-io/chaosblade-spec-go/spec"
+	"github.com/chaosblade-io/chaosblade-spec-go/util"
+	"github.com/containerd/cgroups"
 )
 
 // CommonExecutor is an executor implementation which used copy chaosblade tool to the target container and executed
 type CommonExecutor struct {
-    BaseClientExecutor
+	BaseClientExecutor
 }
 
 func NewCommonExecutor() *CommonExecutor {
-    return &CommonExecutor{
-        BaseClientExecutor{
-            CommandFunc: CommonFunc,
-        },
-    }
+	return &CommonExecutor{
+		BaseClientExecutor{
+			CommandFunc: CommonFunc,
+		},
+	}
 }
 
 func (r *CommonExecutor) Name() string {
-    return "CommonExecutor"
+	return "CommonExecutor"
 }
 
 func (r *CommonExecutor) Exec(uid string, ctx context.Context, expModel *spec.ExpModel) *spec.Response {
-    if err := r.SetClient(expModel); err != nil {
-        log.Errorf(ctx, spec.ContainerExecFailed.Sprintf("GetClient", err))
-        return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "GetClient", err)
-    }
-    containerId := expModel.ActionFlags[ContainerIdFlag.Name]
-    containerName := expModel.ActionFlags[ContainerNameFlag.Name]
-    containerLabelSelector := parseContainerLabelSelector(expModel.ActionFlags[ContainerLabelSelectorFlag.Name])
-    container, response := GetContainer(ctx, r.Client, uid, containerId, containerName, containerLabelSelector)
-    if !response.Success {
-        return response
-    }
-    pid, err, code := r.Client.GetPidById(ctx, container.ContainerId)
-    if err != nil {
-        log.Errorf(ctx, err.Error())
-        return spec.ResponseFail(code, err.Error(), nil)
-    }
+	if err := r.SetClient(expModel); err != nil {
+		log.Errorf(ctx, spec.ContainerExecFailed.Sprintf("GetClient", err))
+		return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "GetClient", err)
+	}
+	containerId := expModel.ActionFlags[ContainerIdFlag.Name]
+	containerName := expModel.ActionFlags[ContainerNameFlag.Name]
+	containerLabelSelector := parseContainerLabelSelector(expModel.ActionFlags[ContainerLabelSelectorFlag.Name])
+	container, response := GetContainer(ctx, r.Client, uid, containerId, containerName, containerLabelSelector)
+	if !response.Success {
+		return response
+	}
+	pid, err, code := r.Client.GetPidById(ctx, container.ContainerId)
+	if err != nil {
+		log.Errorf(ctx, err.Error())
+		return spec.ResponseFail(code, err.Error(), nil)
+	}
 
-    var args string
-    var flags string
+	var args string
+	var flags string
 
-    nsFlags := GetNSExecFlags()
-    m := make(map[string]string, len(nsFlags))
-    for _, f := range nsFlags {
-        m[f.FlagName()] = f.FlagName()
-    }
+	nsFlags := GetNSExecFlags()
+	m := make(map[string]string, len(nsFlags))
+	for _, f := range nsFlags {
+		m[f.FlagName()] = f.FlagName()
+	}
 
-    cgroupRoot := os.Getenv("CGROUP_ROOT")
-    if cgroupRoot != "" && expModel.ActionProcessHang {
-        expModel.ActionFlags["cgroup-root"] = cgroupRoot
-    }
+	cgroupRoot := os.Getenv("CGROUP_ROOT")
+	if cgroupRoot != "" && expModel.ActionProcessHang {
+		expModel.ActionFlags["cgroup-root"] = cgroupRoot
+	}
 
-    for k, v := range expModel.ActionFlags {
-        if v == "" || m[k] != "" || k == "timeout" {
-            continue
-        }
-        flags = fmt.Sprintf("%s --%s=%s", flags, k, v)
-    }
-    _, isDestroy := spec.IsDestroy(ctx)
+	for k, v := range expModel.ActionFlags {
+		if v == "" || m[k] != "" || k == "timeout" {
+			continue
+		}
+		flags = fmt.Sprintf("%s --%s=%s", flags, k, v)
+	}
+	_, isDestroy := spec.IsDestroy(ctx)
 
-    if isDestroy {
-        args = fmt.Sprintf("%s %s %s%s --uid=%s", spec.Destroy, expModel.Target, expModel.ActionName, flags, uid)
-    } else {
-        args = fmt.Sprintf("%s %s %s%s --uid=%s", spec.Create, expModel.Target, expModel.ActionName, flags, uid)
-    }
+	if isDestroy {
+		args = fmt.Sprintf("%s %s %s%s --uid=%s", spec.Destroy, expModel.Target, expModel.ActionName, flags, uid)
+	} else {
+		args = fmt.Sprintf("%s %s %s%s --uid=%s", spec.Create, expModel.Target, expModel.ActionName, flags, uid)
+	}
 
-    args = fmt.Sprintf("%s %s %s %s %s",
-        args,
-        fmt.Sprintf("--%s=%s", model.ChannelFlag.Name, spec.NSExecBin),
-        fmt.Sprintf("--%s=%d", model.NsTargetFlag.Name, pid),
-        fmt.Sprintf("--%s=%s", model.NsPidFlag.Name, spec.True),
-        fmt.Sprintf("--%s=%s", model.NsMntFlag.Name, spec.True),
-    )
+	args = fmt.Sprintf("%s %s %s %s %s",
+		args,
+		fmt.Sprintf("--%s=%s", model.ChannelFlag.Name, spec.NSExecBin),
+		fmt.Sprintf("--%s=%d", model.NsTargetFlag.Name, pid),
+		fmt.Sprintf("--%s=%s", model.NsPidFlag.Name, spec.True),
+		fmt.Sprintf("--%s=%s", model.NsMntFlag.Name, spec.True),
+	)
 
-    if !isDestroy && expModel.ActionProcessHang {
-        return execForHangAction(uid, ctx, expModel, pid, args)
-    }
+	if !isDestroy && expModel.ActionProcessHang {
+		return execForHangAction(uid, ctx, expModel, pid, args)
+	}
 
-    chaosOsBin := path.Join(util.GetProgramPath(), spec.BinPath, spec.ChaosOsBin)
-    argsArray := strings.Split(args, " ")
+	chaosOsBin := path.Join(util.GetProgramPath(), spec.BinPath, spec.ChaosOsBin)
+	argsArray := strings.Split(args, " ")
 
-    command := exec.CommandContext(ctx, chaosOsBin, argsArray...)
-    output, err := command.CombinedOutput()
-    outMsg := string(output)
-    log.Debugf(ctx, "Command Result, output: %v, err: %v", outMsg, err)
-    if err != nil {
-        return spec.ReturnFail(spec.OsCmdExecFailed, fmt.Sprintf("command exec failed, %s", err.Error()))
-    }
-    return spec.Decode(outMsg, nil)
+	command := exec.CommandContext(ctx, chaosOsBin, argsArray...)
+	output, err := command.CombinedOutput()
+	outMsg := string(output)
+	log.Debugf(ctx, "Command Result, output: %v, err: %v", outMsg, err)
+	if err != nil {
+		return spec.ReturnFail(spec.OsCmdExecFailed, fmt.Sprintf("command exec failed, %s", err.Error()))
+	}
+	return spec.Decode(outMsg, nil)
 }
 
 func (r *CommonExecutor) SetChannel(channel spec.Channel) {
 }
 
 func (r *CommonExecutor) DeployChaosBlade(ctx context.Context, containerId string,
-        srcFile, extractDirName string, override bool) error {
-    return nil
+	srcFile, extractDirName string, override bool) error {
+	return nil
 }
 
 func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel, pid int32, args string) *spec.Response {
 
-    chaosOsBin := path.Join(util.GetProgramPath(), spec.BinPath, spec.ChaosOsBin)
+	chaosOsBin := path.Join(util.GetProgramPath(), spec.BinPath, spec.ChaosOsBin)
 
-    args = fmt.Sprintf("-s -t %d -p -n -- %s %s", pid, chaosOsBin, args)
+	args = fmt.Sprintf("-s -t %d -p -n -- %s %s", pid, chaosOsBin, args)
 
-    argsArray := strings.Split(args, " ")
+	argsArray := strings.Split(args, " ")
 
-    bin := path.Join(util.GetProgramPath(), spec.BinPath, spec.NSExecBin)
-    log.Debugf(ctx, "run command, %s %s", bin, args)
+	bin := path.Join(util.GetProgramPath(), spec.BinPath, spec.NSExecBin)
+	log.Debugf(ctx, "run command, %s %s", bin, args)
 
-    command := exec.CommandContext(ctx, bin, argsArray...)
-    command.SysProcAttr = &syscall.SysProcAttr{}
+	command := exec.CommandContext(ctx, bin, argsArray...)
+	command.SysProcAttr = &syscall.SysProcAttr{}
 
-    cgroupRoot := os.Getenv("CGROUP_ROOT")
-    if cgroupRoot == "" {
-        cgroupRoot = expModel.ActionFlags["cgroup-root"]
-        if cgroupRoot == "" {
-            cgroupRoot = "/sys/fs/cgroup/"
-        }
-    }
+	cgroupRoot := os.Getenv("CGROUP_ROOT")
+	if cgroupRoot == "" {
+		cgroupRoot = expModel.ActionFlags["cgroup-root"]
+		if cgroupRoot == "" {
+			cgroupRoot = "/sys/fs/cgroup/"
+		}
+	}
 
-    log.Debugf(ctx, "cgroup root path %s", cgroupRoot)
+	log.Debugf(ctx, "cgroup root path %s", cgroupRoot)
 
-    control, err := cgroups.Load(osexec.Hierarchy(cgroupRoot), osexec.PidPath(int(pid)))
-    if err != nil {
-        sprintf := fmt.Sprintf("cgroups load failed, %s", err.Error())
-        return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
-    }
+	control, err := cgroups.Load(osexec.Hierarchy(cgroupRoot), osexec.PidPath(int(pid)))
+	if err != nil {
+		sprintf := fmt.Sprintf("cgroups load failed, %s", err.Error())
+		return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
+	}
 
-    if err := command.Start(); err != nil {
-        sprintf := fmt.Sprintf("command start failed, %s", err.Error())
-        return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
-    }
+	if err := command.Start(); err != nil {
+		sprintf := fmt.Sprintf("command start failed, %s", err.Error())
+		return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
+	}
 
-    // add target cgroups
-    if err = control.Add(cgroups.Process{Pid: command.Process.Pid}); err != nil {
-        if err := command.Process.Kill(); err != nil {
-            sprintf := fmt.Sprintf("create experiment failed, %v", err)
-            return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
-        }
-    }
+	// add target cgroups
+	if err = control.Add(cgroups.Process{Pid: command.Process.Pid}); err != nil {
+		if err := command.Process.Kill(); err != nil {
+			sprintf := fmt.Sprintf("create experiment failed, %v", err)
+			return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
+		}
+	}
 
-    signal := make(chan bool, 1)
-    go func() {
-        for {
-            if comm, err := getProcessComm(command.Process.Pid); err != nil {
-                log.Errorf(ctx, "get process comm failed, %s", err.Error())
-            } else {
-                if cmdline, err := getProcessCmdline(command.Process.Pid); err != nil {
-                    log.Errorf(ctx, "get process cmdline failed, %s", err.Error())
-                } else {
-                    if cmdline == "" {
-                        log.Errorf(ctx, "unknown err, process exit.")
-                        signal <- true
-                        break
-                    }
-                }
+	signal := make(chan bool, 1)
+	go func() {
+		for {
+			if comm, err := getProcessComm(command.Process.Pid); err != nil {
+				log.Errorf(ctx, "get process comm failed, %s", err.Error())
+			} else {
+				if cmdline, err := getProcessCmdline(command.Process.Pid); err != nil {
+					log.Errorf(ctx, "get process cmdline failed, %s", err.Error())
+				} else {
+					if cmdline == "" {
+						log.Errorf(ctx, "unknown err, process exit.")
+						signal <- true
+						break
+					}
+				}
 
-                log.Infof(ctx, "wait nasexec process pasue, current comm: %s, pid: %d", comm, command.Process.Pid)
-                if comm == "pause\n" {
-                    signal <- true
-                    break
-                }
-            }
-            time.Sleep(time.Millisecond)
-        }
-    }()
+				log.Infof(ctx, "wait nsexec process pasue, current comm: %s, pid: %d", comm, command.Process.Pid)
+				if comm == "pause\n" {
+					signal <- true
+					break
+				}
+			}
+			time.Sleep(time.Millisecond)
+		}
+	}()
 
-    if <-signal {
-        for {
-            if err := command.Process.Signal(syscall.SIGCONT); err != nil {
-                sprintf := fmt.Sprintf("send signal failed, %s", err.Error())
-                return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
-            }
-            time.Sleep(time.Millisecond)
+	if <-signal {
+		for {
+			if err := command.Process.Signal(syscall.SIGCONT); err != nil {
+				sprintf := fmt.Sprintf("send signal failed, %s", err.Error())
+				return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
+			}
+			time.Sleep(time.Millisecond)
 
-            if comm, err := getProcessComm(command.Process.Pid); err != nil {
-                log.Errorf(ctx, "get process comm failed, %s", err.Error())
-            } else {
-                if cmdline, err := getProcessCmdline(command.Process.Pid); err != nil {
-                    log.Errorf(ctx, "get process cmdline failed, %s", err.Error())
-                } else {
-                    if cmdline == "" {
-                        log.Errorf(ctx, "unknown err, process exit.")
-                        break
-                    }
-                }
+			if comm, err := getProcessComm(command.Process.Pid); err != nil {
+				log.Errorf(ctx, "get process comm failed, %s", err.Error())
+			} else {
+				if cmdline, err := getProcessCmdline(command.Process.Pid); err != nil {
+					log.Errorf(ctx, "get process cmdline failed, %s", err.Error())
+				} else {
+					if cmdline == "" {
+						log.Errorf(ctx, "unknown err, process exit.")
+						break
+					}
+				}
 
-                log.Infof(ctx, "wait nasexec process resume, current comm: %s, pid: %d", comm, command.Process.Pid)
-                if comm == "nsexec\n" {
-                    break
-                }
-            }
-        }
-    }
-    return spec.ReturnSuccess(command.Process.Pid)
+				log.Infof(ctx, "wait nsexec process resume, current comm: %s, pid: %d", comm, command.Process.Pid)
+				if comm == "nsexec\n" {
+					break
+				}
+			}
+		}
+	}
+	return spec.ReturnSuccess(command.Process.Pid)
 }
 
 func getProcessComm(pid int) (string, error) {
-    f, err := os.Open(fmt.Sprintf("%s/%d/comm", "/proc", pid))
-    if err != nil {
-        return "", err
-    }
-    defer f.Close()
+	f, err := os.Open(fmt.Sprintf("%s/%d/comm", "/proc", pid))
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
 
-    b, err := ioutil.ReadAll(f)
-    if err != nil {
-        return "", err
-    }
+	b, err := ioutil.ReadAll(f)
+	if err != nil {
+		return "", err
+	}
 
-    return string(b), nil
+	return string(b), nil
 }
 
 func getProcessCmdline(pid int) (string, error) {
-    f, err := os.Open(fmt.Sprintf("%s/%d/cmdline", "/proc", pid))
-    if err != nil {
-        return "", err
-    }
-    defer f.Close()
+	f, err := os.Open(fmt.Sprintf("%s/%d/cmdline", "/proc", pid))
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
 
-    b, err := ioutil.ReadAll(f)
-    if err != nil {
-        return "", err
-    }
+	b, err := ioutil.ReadAll(f)
+	if err != nil {
+		return "", err
+	}
 
-    return string(b), nil
+	return string(b), nil
 }
