@@ -19,7 +19,7 @@ package exec
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -190,6 +190,7 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 					}
 				}
 
+
 				log.Infof(ctx, "wait nsexec process pasue, current comm: %s, pid: %d", comm, command.Process.Pid)
 				if comm == "pause\n" {
 					signal <- true
@@ -237,7 +238,7 @@ func getProcessComm(pid int) (string, error) {
 	}
 	defer f.Close()
 
-	b, err := ioutil.ReadAll(f)
+	b, err := io.ReadAll(f)
 	if err != nil {
 		return "", err
 	}
@@ -252,7 +253,7 @@ func getProcessCmdline(pid int) (string, error) {
 	}
 	defer f.Close()
 
-	b, err := ioutil.ReadAll(f)
+	b, err := io.ReadAll(f)
 	if err != nil {
 		return "", err
 	}
