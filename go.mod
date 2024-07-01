@@ -3,8 +3,8 @@ module github.com/chaosblade-io/chaosblade-exec-cri
 go 1.20
 
 require (
-	github.com/chaosblade-io/chaosblade-exec-os v1.7.3
-	github.com/chaosblade-io/chaosblade-spec-go v1.7.3
+	github.com/chaosblade-io/chaosblade-exec-os v1.7.4
+	github.com/chaosblade-io/chaosblade-spec-go v1.7.4
 	github.com/containerd/cgroups v1.0.2-0.20210605143700-23b51209bf7b
 	github.com/containerd/containerd v1.5.6
 	github.com/docker/docker v0.0.0-20180612054059-a9fbbdc8dd87
@@ -17,7 +17,6 @@ require (
 	github.com/Microsoft/go-winio v0.4.17 // indirect
 	github.com/Microsoft/hcsshim v0.8.21 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
-	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/bits-and-blooms/bitset v1.2.0 // indirect
 	github.com/containerd/continuity v0.1.0 // indirect
 	github.com/containerd/fifo v1.0.0 // indirect
@@ -28,7 +27,7 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c // indirect
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/go-ole/go-ole v1.2.5 // indirect
+	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/godbus/dbus/v5 v5.0.4 // indirect
 	github.com/gogo/googleapis v1.4.0 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
@@ -47,10 +46,11 @@ require (
 	github.com/opencontainers/selinux v1.8.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rogpeppe/go-internal v1.11.0 // indirect
-	github.com/shirou/gopsutil v3.21.6+incompatible // indirect
+	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
-	github.com/tklauser/go-sysconf v0.3.7 // indirect
-	github.com/tklauser/numcpus v0.2.3 // indirect
+	github.com/tklauser/go-sysconf v0.3.9 // indirect
+	github.com/tklauser/numcpus v0.3.0 // indirect
+	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opencensus.io v0.22.3 // indirect
 	go.uber.org/automaxprocs v1.3.0 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
