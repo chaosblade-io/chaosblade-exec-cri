@@ -190,7 +190,8 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 					}
 				}
 
-				log.Infof(ctx, "wait nasexec process pasue, current comm: %s, pid: %d", comm, command.Process.Pid)
+
+				log.Infof(ctx, "wait nsexec process pasue, current comm: %s, pid: %d", comm, command.Process.Pid)
 				if comm == "pause\n" {
 					signal <- true
 					break
@@ -220,7 +221,7 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 					}
 				}
 
-				log.Infof(ctx, "wait nasexec process resume, current comm: %s, pid: %d", comm, command.Process.Pid)
+				log.Infof(ctx, "wait nsexec process resume, current comm: %s, pid: %d", comm, command.Process.Pid)
 				if comm == "nsexec\n" {
 					break
 				}
