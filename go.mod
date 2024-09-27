@@ -18,6 +18,7 @@ require (
 	github.com/Microsoft/hcsshim v0.8.21 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/bits-and-blooms/bitset v1.2.0 // indirect
+	github.com/cilium/ebpf v0.6.2 // indirect
 	github.com/containerd/continuity v0.1.0 // indirect
 	github.com/containerd/fifo v1.0.0 // indirect
 	github.com/containerd/ttrpc v1.0.2 // indirect
