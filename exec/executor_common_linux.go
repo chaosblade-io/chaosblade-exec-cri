@@ -55,7 +55,7 @@ func (r *CommonExecutor) Name() string {
 
 func (r *CommonExecutor) Exec(uid string, ctx context.Context, expModel *spec.ExpModel) *spec.Response {
 	if err := r.SetClient(expModel); err != nil {
-		log.Errorf(ctx, spec.ContainerExecFailed.Sprintf("GetClient", err))
+		log.Errorf(ctx, spec.ContainerExecFailed.Sprintf("GetClient,error: %v", err))
 		return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "GetClient", err)
 	}
 	containerId := expModel.ActionFlags[ContainerIdFlag.Name]
@@ -67,7 +67,7 @@ func (r *CommonExecutor) Exec(uid string, ctx context.Context, expModel *spec.Ex
 	}
 	pid, err, code := r.Client.GetPidById(ctx, container.ContainerId)
 	if err != nil {
-		log.Errorf(ctx, err.Error())
+		log.Errorf(ctx, "GetPidById,error: %v", err)
 		return spec.ResponseFail(code, err.Error(), nil)
 	}
 
@@ -113,6 +113,13 @@ func (r *CommonExecutor) Exec(uid string, ctx context.Context, expModel *spec.Ex
 
 	chaosOsBin := path.Join(util.GetProgramPath(), spec.BinPath, spec.ChaosOsBin)
 	argsArray := strings.Split(args, " ")
+
+	log.Debugf(ctx, "chaosOsBin full path: %s", chaosOsBin)
+
+	// 检查文件是否存在
+	if _, err := os.Stat(chaosOsBin); os.IsNotExist(err) {
+		log.Debugf(ctx, "chaos_os binary not found at: %s", chaosOsBin)
+	}
 
 	command := exec.CommandContext(ctx, chaosOsBin, argsArray...)
 	output, err := command.CombinedOutput()
@@ -163,17 +170,20 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 	if isCgroupV2 {
 		g, err := cgroupsv2.PidGroupPath(int(pid))
 		if err != nil {
-			sprintf := fmt.Sprintf("loading cgroup2 for %d, err ", pid, err.Error())
+			sprintf := fmt.Sprintf("loading cgroup2 for %d, err %s", pid, err.Error())
 			return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
 		}
-		cg, err := cgroupsv2.LoadManager("/sys/fs/cgroup/", g)
+
+		cgPath := path.Join(cgroupRoot, g)
+		cg, err := cgroupsv2.LoadManager(cgroupRoot, cgPath)
 		if err != nil {
 			if err != cgroupsv2.ErrCgroupDeleted {
+				if cg, err = cgroupsv2.NewManager(cgroupRoot, cgPath, nil); err != nil {
+					sprintf := fmt.Sprintf("cgroups V2 new manager failed, %s", err.Error())
+					return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
+				}
+			} else {
 				sprintf := fmt.Sprintf("cgroups V2 load failed, %s", err.Error())
-				return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
-			}
-			if cg, err = cgroupsv2.NewManager("/sys/fs/cgroup", cgroupRoot, nil); err != nil {
-				sprintf := fmt.Sprintf("cgroups V2 new manager failed, %s", err.Error())
 				return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
 			}
 		}
