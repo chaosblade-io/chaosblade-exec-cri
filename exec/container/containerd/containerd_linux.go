@@ -172,6 +172,10 @@ func (c *Client) RemoveContainer(ctx context.Context, containerId string, _ bool
 		ContainerID: containerId,
 		Signal:      uint32(syscall.SIGKILL),
 	}); err != nil {
+		if errdefs.IsNotFound(err) {
+			log.Warnf(ctx, "task is not found to kill, ID: %v, err: %v", containerId, err)
+			return nil
+		}
 		return err
 	}
 
@@ -179,6 +183,7 @@ func (c *Client) RemoveContainer(ctx context.Context, containerId string, _ bool
 	// WARNING: Therefore containerd cri and the upstream kubelet CAN NOT retrieve the info about restart .
 	if err := c.cclient.ContainerService().Delete(ctx, containerId); err != nil {
 		if errdefs.IsNotFound(err) {
+			log.Warnf(ctx, "container is not found to delete, ID: %v, err: %v", containerId, err)
 			return nil
 		}
 		return err
