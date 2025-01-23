@@ -30,6 +30,7 @@ import (
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 	"github.com/chaosblade-io/chaosblade-spec-go/util"
 	"github.com/containerd/containerd"
+	tasksv1 "github.com/containerd/containerd/api/services/tasks/v1"
 	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/containers"
 	"github.com/containerd/containerd/errdefs"
@@ -165,17 +166,25 @@ func convertContainerInfo(containerDetail containers.Container) container.Contai
 		Spec:   containerDetail.Spec,
 	}
 }
-func (c *Client) RemoveContainer(ctx context.Context, containerId string, force bool) error {
-	err := c.cclient.ContainerService().Delete(c.Ctx, containerId)
-	if err == nil {
-		return nil
+
+func (c *Client) RemoveContainer(ctx context.Context, containerId string, _ bool) error {
+	if _, err := c.cclient.TaskService().Kill(ctx, &tasksv1.KillRequest{
+		ContainerID: containerId,
+		Signal:      uint32(syscall.SIGKILL),
+	}); err != nil {
+		return err
 	}
 
-	if errdefs.IsNotFound(err) {
-		return nil
+	// remove container completely and nothing remains.
+	// WARNING: Therefore containerd cri and the upstream kubelet CAN NOT retrieve the info about restart .
+	if err := c.cclient.ContainerService().Delete(ctx, containerId); err != nil {
+		if errdefs.IsNotFound(err) {
+			return nil
+		}
+		return err
 	}
 
-	return err
+	return nil
 }
 
 func (c *Client) CopyToContainer(ctx context.Context, containerId, srcFile, dstPath, extractDirName string, override bool) error {
@@ -203,7 +212,7 @@ func (c *Client) ExecContainer(ctx context.Context, containerId, command string)
 	return container.ExecContainer(ctx, id, command)
 }
 
-//ExecuteAndRemove: create and start a container for executing a command, and remove the container
+// ExecuteAndRemove: create and start a container for executing a command, and remove the container
 func (c *Client) ExecuteAndRemove(ctx context.Context, config *containertype.Config, hostConfig *containertype.HostConfig,
 	networkConfig *network.NetworkingConfig, containerName string, removed bool, timeout time.Duration,
 	command string, containerInfo container.ContainerInfo) (containerId string, output string, err error, code int32) {
