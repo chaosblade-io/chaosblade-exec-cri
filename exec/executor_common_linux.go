@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -32,6 +33,7 @@ import (
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 	"github.com/chaosblade-io/chaosblade-spec-go/util"
+
 	"github.com/containerd/cgroups"
 	cgroupsv2 "github.com/containerd/cgroups/v2"
 )
@@ -259,7 +261,53 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 			}
 		}
 	}
+
+	if expModel.Target == "mem" && expModel.ActionFlags["avoid-being-killed"] == "true" {
+		if err := exec.Command("choom", "-n", "-1000", "-p", strconv.Itoa(command.Process.Pid)).Run(); err != nil { //nolint:gosec
+			log.Errorf(ctx, "choom failed, %s", err.Error())
+		} else {
+			log.Infof(ctx, "choom success, target pid: %v, current pid: %v", command.Process.Pid, os.Getpid())
+			choomChildProcesses(ctx, command.Process.Pid)
+		}
+	}
+
 	return spec.ReturnSuccess(command.Process.Pid)
+}
+
+func choomChildProcesses(ctx context.Context, pid int) {
+	childPids, err := getChildPids(pid)
+	if err != nil {
+		log.Errorf(ctx, "failed to get child pids for pid %d, %s", pid, err.Error())
+		return
+	}
+
+	for _, childPid := range childPids {
+		if err := exec.Command("choom", "-n", "-1000", "-p", strconv.Itoa(childPid)).Run(); err != nil { //nolint:gosec
+			log.Errorf(ctx, "choom failed for child pid %d, %s", childPid, err.Error())
+		} else {
+			log.Infof(ctx, "choom success for child pid %d", childPid)
+			choomChildProcesses(ctx, childPid)
+		}
+	}
+}
+
+func getChildPids(pid int) ([]int, error) {
+	procPath := fmt.Sprintf("/proc/%d/task/%d/children", pid, pid)
+	data, err := os.ReadFile(procPath)
+	if err != nil {
+		return nil, err
+	}
+
+	childPidsStr := strings.Fields(string(data))
+	childPids := make([]int, len(childPidsStr))
+	for i, pidStr := range childPidsStr {
+		childPids[i], err = strconv.Atoi(pidStr)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return childPids, nil
 }
 
 func getProcessComm(pid int) (string, error) {
