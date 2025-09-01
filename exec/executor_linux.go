@@ -1,3 +1,5 @@
+//go:build linux
+
 /*
  * Copyright 1999-2019 Alibaba Group Holding Ltd.
  *

@@ -16,25 +16,11 @@
 package containerd
 
 import (
-	"context"
-
 	"github.com/containerd/containerd/cio"
 )
 
 type directIO struct {
 	cio.DirectIO
-}
-
-func newDirectIO(ctx context.Context, execId string, terminal bool) (*directIO, error) {
-	fifos, err := cio.NewFIFOSetInDir("/run/containerd/fifo", execId, terminal)
-	if err != nil {
-		return nil, err
-	}
-	dio, err := cio.NewDirectIO(ctx, fifos)
-	if err != nil {
-		return nil, err
-	}
-	return &directIO{DirectIO: *dio}, nil
 }
 
 // Delete removes the underlying directory containing fifos

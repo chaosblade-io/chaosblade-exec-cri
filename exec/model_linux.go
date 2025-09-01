@@ -1,3 +1,5 @@
+//go:build linux
+
 /*
  * Copyright 1999-2019 Alibaba Group Holding Ltd.
  *
@@ -17,94 +19,94 @@
 package exec
 
 import (
-    "github.com/chaosblade-io/chaosblade-spec-go/spec"
+	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 )
 
 func NewCriExpModelSpec() *DockerExpModelSpec {
-    modelSpec := &DockerExpModelSpec{
-        ScopeName:     "cri",
-        ExpModelSpecs: make(map[string]spec.ExpModelCommandSpec, 0),
-    }
+	modelSpec := &DockerExpModelSpec{
+		ScopeName:     "cri",
+		ExpModelSpecs: make(map[string]spec.ExpModelCommandSpec, 0),
+	}
 
-    // common
-    commonModelSpec := []spec.ExpModelCommandSpec{
-        newCpuCommandModelSpecForDocker(),
-        newDiskFillCommandSpecForDocker(),
-        newMemCommandModelSpecForDocker(),
-        newFileCommandSpecForDocker(),
-        newProcessCommandModelSpecForDocker(),
-    }
-    spec.AddExecutorToModelSpec(NewCommonExecutor(), commonModelSpec...)
-    spec.AddFlagsToModelSpec(GetNSExecFlags, commonModelSpec...)
+	// common
+	commonModelSpec := []spec.ExpModelCommandSpec{
+		newCpuCommandModelSpecForDocker(),
+		newDiskFillCommandSpecForDocker(),
+		newMemCommandModelSpecForDocker(),
+		newFileCommandSpecForDocker(),
+		newProcessCommandModelSpecForDocker(),
+	}
+	spec.AddExecutorToModelSpec(NewCommonExecutor(), commonModelSpec...)
+	spec.AddFlagsToModelSpec(GetNSExecFlags, commonModelSpec...)
 
-    // network
-    networkModeSpec := newNetworkCommandModelSpecForDocker()
-    spec.AddExecutorToModelSpec(NewNetworkExecutor(), networkModeSpec)
-    spec.AddFlagsToModelSpec(GetNSExecFlags, networkModeSpec)
+	// network
+	networkModeSpec := newNetworkCommandModelSpecForDocker()
+	spec.AddExecutorToModelSpec(NewNetworkExecutor(), networkModeSpec)
+	spec.AddFlagsToModelSpec(GetNSExecFlags, networkModeSpec)
 
-    for _, action := range networkModeSpec.Actions() {
-        if action.Name() == "dns" || action.Name() == "occupy" {
-            action.SetExecutor(NewCommonExecutor())
-        }
-    }
+	for _, action := range networkModeSpec.Actions() {
+		if action.Name() == "dns" || action.Name() == "occupy" {
+			action.SetExecutor(NewCommonExecutor())
+		}
+	}
 
-    // copy
-    execInContainerModelSpecs := getJvmModels()
-    spec.AddExecutorToModelSpec(NewRunCmdInContainerExecutorByCP(), execInContainerModelSpecs...)
-    spec.AddFlagsToModelSpec(GetExecInContainerFlags, execInContainerModelSpecs...)
+	// copy
+	execInContainerModelSpecs := getJvmModels()
+	spec.AddExecutorToModelSpec(NewRunCmdInContainerExecutorByCP(), execInContainerModelSpecs...)
+	spec.AddFlagsToModelSpec(GetExecInContainerFlags, execInContainerModelSpecs...)
 
-    // self
-    containerSelfModelSpec := NewContainerCommandSpec()
-    spec.AddFlagsToModelSpec(GetContainerSelfFlags, containerSelfModelSpec)
+	// self
+	containerSelfModelSpec := NewContainerCommandSpec()
+	spec.AddFlagsToModelSpec(GetContainerSelfFlags, containerSelfModelSpec)
 
-    expModelCommandSpecs := append(commonModelSpec, networkModeSpec)
-    expModelCommandSpecs = append(expModelCommandSpecs, execInContainerModelSpecs...)
-    expModelCommandSpecs = append(expModelCommandSpecs, containerSelfModelSpec)
-    modelSpec.addExpModels(expModelCommandSpecs...)
-    return modelSpec
+	expModelCommandSpecs := append(commonModelSpec, networkModeSpec)
+	expModelCommandSpecs = append(expModelCommandSpecs, execInContainerModelSpecs...)
+	expModelCommandSpecs = append(expModelCommandSpecs, containerSelfModelSpec)
+	modelSpec.addExpModels(expModelCommandSpecs...)
+	return modelSpec
 }
 
 func NewDockerExpModelSpec() *DockerExpModelSpec {
-    modelSpec := &DockerExpModelSpec{
-        ScopeName:     "docker",
-        ExpModelSpecs: make(map[string]spec.ExpModelCommandSpec, 0),
-    }
+	modelSpec := &DockerExpModelSpec{
+		ScopeName:     "docker",
+		ExpModelSpecs: make(map[string]spec.ExpModelCommandSpec, 0),
+	}
 
-    // common
-    commonModelSpec := []spec.ExpModelCommandSpec{
-        newCpuCommandModelSpecForDocker(),
-        newDiskFillCommandSpecForDocker(),
-        newMemCommandModelSpecForDocker(),
-        newFileCommandSpecForDocker(),
-        newProcessCommandModelSpecForDocker(),
-    }
+	// common
+	commonModelSpec := []spec.ExpModelCommandSpec{
+		newCpuCommandModelSpecForDocker(),
+		newDiskFillCommandSpecForDocker(),
+		newMemCommandModelSpecForDocker(),
+		newFileCommandSpecForDocker(),
+		newProcessCommandModelSpecForDocker(),
+	}
 
-    spec.AddExecutorToModelSpec(NewCommonExecutor(), commonModelSpec...)
-    spec.AddFlagsToModelSpec(GetNSExecFlags, commonModelSpec...)
+	spec.AddExecutorToModelSpec(NewCommonExecutor(), commonModelSpec...)
+	spec.AddFlagsToModelSpec(GetNSExecFlags, commonModelSpec...)
 
-    // network
-    networkModeSpec := newNetworkCommandModelSpecForDocker()
-    spec.AddExecutorToModelSpec(NewNetworkExecutor(), networkModeSpec)
-    spec.AddFlagsToModelSpec(GetNSExecFlags, networkModeSpec)
+	// network
+	networkModeSpec := newNetworkCommandModelSpecForDocker()
+	spec.AddExecutorToModelSpec(NewNetworkExecutor(), networkModeSpec)
+	spec.AddFlagsToModelSpec(GetNSExecFlags, networkModeSpec)
 
-    for _, action := range networkModeSpec.Actions() {
-        if action.Name() == "dns" || action.Name() == "occupy" {
-            action.SetExecutor(NewCommonExecutor())
-        }
-    }
+	for _, action := range networkModeSpec.Actions() {
+		if action.Name() == "dns" || action.Name() == "occupy" {
+			action.SetExecutor(NewCommonExecutor())
+		}
+	}
 
-    // copy
-    execInContainerModelSpecs := getJvmModels()
-    spec.AddExecutorToModelSpec(NewRunCmdInContainerExecutorByCP(), execInContainerModelSpecs...)
-    spec.AddFlagsToModelSpec(GetExecInContainerFlags, execInContainerModelSpecs...)
+	// copy
+	execInContainerModelSpecs := getJvmModels()
+	spec.AddExecutorToModelSpec(NewRunCmdInContainerExecutorByCP(), execInContainerModelSpecs...)
+	spec.AddFlagsToModelSpec(GetExecInContainerFlags, execInContainerModelSpecs...)
 
-    // self
-    containerSelfModelSpec := NewContainerCommandSpec()
-    spec.AddFlagsToModelSpec(GetContainerSelfFlags, containerSelfModelSpec)
+	// self
+	containerSelfModelSpec := NewContainerCommandSpec()
+	spec.AddFlagsToModelSpec(GetContainerSelfFlags, containerSelfModelSpec)
 
-    expModelCommandSpecs := append(commonModelSpec, networkModeSpec)
-    expModelCommandSpecs = append(expModelCommandSpecs, execInContainerModelSpecs...)
-    expModelCommandSpecs = append(expModelCommandSpecs, containerSelfModelSpec)
-    modelSpec.addExpModels(expModelCommandSpecs...)
-    return modelSpec
+	expModelCommandSpecs := append(commonModelSpec, networkModeSpec)
+	expModelCommandSpecs = append(expModelCommandSpecs, execInContainerModelSpecs...)
+	expModelCommandSpecs = append(expModelCommandSpecs, containerSelfModelSpec)
+	modelSpec.addExpModels(expModelCommandSpecs...)
+	return modelSpec
 }

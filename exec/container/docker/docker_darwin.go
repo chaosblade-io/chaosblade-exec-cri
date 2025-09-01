@@ -1,3 +1,5 @@
+//go:build darwin
+
 /*
  * Copyright 1999-2020 Alibaba Group Holding Ltd.
  *
@@ -19,14 +21,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/stdcopy"
-	"os"
-	"strings"
 )
 
-//execContainer with command which does not contain "sh -c" in the target container
+// execContainer with command which does not contain "sh -c" in the target container
 func execContainerWithConf(ctx context.Context, containerId, command string, config types.ExecConfig, c *Client) (output string, err error) {
 	log.Infof(ctx, "execute command: %s", strings.Join(config.Cmd, " "))
 	id, err := c.client.ContainerExecCreate(ctx, containerId, config)

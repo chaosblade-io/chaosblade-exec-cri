@@ -1,7 +1,7 @@
-//go:build darwin
+//go:build linux
 
 /*
- * Copyright 1999-2019 Alibaba Group Holding Ltd.
+ * Copyright 1999-2020 Alibaba Group Holding Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,25 @@
  * limitations under the License.
  */
 
-package exec
+package containerd
 
 import (
-	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container"
-	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container/docker"
-	"github.com/chaosblade-io/chaosblade-spec-go/spec"
+	"context"
+
+	"github.com/containerd/containerd/cio"
 )
 
-func GetClientByRuntime(expModel *spec.ExpModel) (container.Container, error) {
-	return docker.NewClient(expModel.ActionFlags[EndpointFlag.Name])
+func newDirectIO(ctx context.Context, execId string, terminal bool) (*directIO, error) {
+	fifos, err := cio.NewFIFOSetInDir("/run/containerd/fifo", execId, terminal)
+	if err != nil {
+		return nil, err
+	}
+
+	// Linux implementation - NewDirectIO returns (DirectIO, error)
+	dio, err := cio.NewDirectIO(ctx, fifos)
+	if err != nil {
+		return nil, err
+	}
+
+	return &directIO{DirectIO: *dio}, nil
 }
