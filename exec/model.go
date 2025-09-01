@@ -1,3 +1,5 @@
+//go:build linux || darwin
+
 /*
  * Copyright 1999-2019 Alibaba Group Holding Ltd.
  *
@@ -18,6 +20,7 @@ package exec
 
 import (
 	"fmt"
+
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/cpu"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/disk"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/file"

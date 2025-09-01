@@ -1,7 +1,7 @@
-//go:build darwin
+//go:build windows
 
 /*
- * Copyright 1999-2019 Alibaba Group Holding Ltd.
+ * Copyright 1999-2020 Alibaba Group Holding Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-package exec
+package docker
 
 import (
-	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container"
-	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container/docker"
-	"github.com/chaosblade-io/chaosblade-spec-go/spec"
+	"context"
+	"fmt"
 )
 
-func GetClientByRuntime(expModel *spec.ExpModel) (container.Container, error) {
-	return docker.NewClient(expModel.ActionFlags[EndpointFlag.Name])
+// ExecContainer executes a command in a running container
+func (c *Client) ExecContainer(ctx context.Context, containerId, command string) (output string, err error) {
+	return "", fmt.Errorf("ExecContainer not implemented for Windows platform")
 }
