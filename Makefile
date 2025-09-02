@@ -80,6 +80,7 @@ help:
 	@echo "Available targets:"
 	@echo ""
 	@echo "  Platform-specific builds:"
+	@echo "    build     	   - Build for current platform"
 	@echo "    linux_amd64     - Build for Linux AMD64 architecture"
 	@echo "    linux_arm64     - Build for Linux ARM64 architecture"
 	@echo "    darwin_amd64    - Build for macOS AMD64 architecture"
