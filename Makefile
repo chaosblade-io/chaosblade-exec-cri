@@ -16,16 +16,14 @@ ifeq ($(BLADE_VERSION), )
 	BLADE_VERSION=$(GIT_TAG)
 endif
 
+CHAOSBLADE_PATH=build/cache/chaosblade
+
 # JVM spec file path configuration
 ifeq ($(JVM_SPEC_PATH), )
 	JVM_SPEC_PATH=$(CHAOSBLADE_PATH)/yaml
 endif
 
 BUILD_TARGET=target
-BUILD_TARGET_DIR_NAME=chaosblade-$(BLADE_VERSION)
-BUILD_TARGET_PKG_DIR=$(BUILD_TARGET)/chaosblade-$(BLADE_VERSION)
-BUILD_TARGET_YAML=$(BUILD_TARGET_PKG_DIR)/yaml
-BUILD_IMAGE_PATH=build/image/blade
 
 # Architecture-specific variables
 GOOS ?= $(shell go env GOOS)
@@ -36,10 +34,7 @@ BUILD_TARGET_PLATFORM_YAML=$(BUILD_TARGET_PLATFORM_DIR)/yaml
 BINARY_NAME=chaosblade-exec-cri
 
 CRI_OS_YAML_FILE_NAME=chaosblade-cri-spec-$(BLADE_VERSION).yaml
-CRI_OS_YAML_FILE_PATH=$(BUILD_TARGET_YAML)/$(CRI_OS_YAML_FILE_NAME)
 CRI_OS_YAML_FILE_PATH_PLATFORM=$(BUILD_TARGET_PLATFORM_YAML)/$(CRI_OS_YAML_FILE_NAME)
-
-CHAOSBLADE_PATH=build/cache/chaosblade
 
 ifeq ($(GOOS), linux)
 	GO_FLAGS=-ldflags="-s -w"
@@ -51,11 +46,6 @@ endif
 
 # Default target
 .DEFAULT_GOAL := help
-
-# Default build (backward compatibility)
-build: pre_build build_yaml
-
-build_linux: build
 
 # Build all platforms
 build_all: clean
@@ -98,9 +88,6 @@ help:
 	@echo ""
 	@echo "  Build targets:"
 	@echo "    build_all       - Build for all supported platforms"
-	@echo "    build_cri_spec  - Build CRI-only specification (recommended)"
-	@echo "    build           - Build with JVM dependency (legacy)"
-	@echo "    build_linux     - Alias for build"
 	@echo ""
 	@echo "  Utility targets:"
 	@echo "    clean           - Clean all build artifacts"
@@ -128,6 +115,9 @@ help:
 	@echo "    GOARCH         - Target architecture (amd64, arm64)"
 	@echo ""
 
+
+build:
+	$(MAKE) build_platform GOOS=$(GOOS) GOARCH=$(GOARCH)
 # Platform-specific builds
 linux_amd64:
 	$(MAKE) build_platform GOOS=linux GOARCH=amd64
@@ -147,12 +137,7 @@ windows_amd64:
 # Build for specific platform
 build_platform: pre_build_platform build_yaml_platform
 
-pre_build:
-	rm -rf $(BUILD_TARGET_PKG_DIR)
-	mkdir -p $(BUILD_TARGET_YAML)
-
 pre_build_platform:
-	rm -rf $(BUILD_TARGET_PLATFORM_DIR)
 	mkdir -p $(BUILD_TARGET_PLATFORM_YAML)
 
 
@@ -165,13 +150,13 @@ ensure_jvm_spec:
 	fi
 
 # Build CRI-only specification (without JVM dependency)
-build_cri_spec: pre_build
+build_cri_spec: pre_build_platform
 	@echo "Building CRI-only specification..."
-	$(GO) run build/spec.go $(CRI_OS_YAML_FILE_PATH) cri
+	$(GO) run build/spec.go $(CRI_OS_YAML_FILE_PATH_PLATFORM) cri
 
 # Legacy build with JVM dependency (for backward compatibility)
 build_yaml: ensure_jvm_spec
-	$(GO) run build/spec.go $(CRI_OS_YAML_FILE_PATH) cri $(JVM_SPEC_PATH)/chaosblade-jvm-spec-$(BLADE_VERSION).yaml
+	$(GO) run build/spec.go $(CRI_OS_YAML_FILE_PATH_PLATFORM) cri $(JVM_SPEC_PATH)/chaosblade-jvm-spec-$(BLADE_VERSION).yaml
 
 build_yaml_platform: ensure_jvm_spec
 	env CGO_ENABLED=0 GO111MODULE=on GOOS= GOARCH= go run build/spec.go $(CRI_OS_YAML_FILE_PATH_PLATFORM) cri $(JVM_SPEC_PATH)/chaosblade-jvm-spec-$(BLADE_VERSION).yaml
@@ -298,4 +283,3 @@ verify_modules:
 clean:
 	go clean ./...
 	rm -rf $(BUILD_TARGET)
-	rm -rf $(BUILD_IMAGE_PATH)/$(BUILD_TARGET_DIR_NAME)
