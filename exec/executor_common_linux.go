@@ -196,10 +196,11 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 			return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
 		}
 		if err := cg.AddProc(uint64(command.Process.Pid)); err != nil {
-			if err := command.Process.Kill(); err != nil {
-				sprintf := fmt.Sprintf("add process to cgroups V2 failed, %s", err.Error())
-				return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
+			if killErr := command.Process.Kill(); killErr != nil {
+				log.Errorf(ctx, "failed to kill process after cgroup add failure: %s", killErr.Error())
 			}
+			sprintf := fmt.Sprintf("add process to cgroups V2 failed, %s", err.Error())
+			return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
 		}
 	} else {
 		control, err := cgroups.Load(osexec.Hierarchy(cgroupRoot), osexec.PidPath(int(pid)))
@@ -213,25 +214,31 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 		}
 		// add target cgroups
 		if err = control.Add(cgroups.Process{Pid: command.Process.Pid}); err != nil {
-			if err := command.Process.Kill(); err != nil {
-				sprintf := fmt.Sprintf("create experiment failed, %v", err)
-				return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
+			if killErr := command.Process.Kill(); killErr != nil {
+				log.Errorf(ctx, "failed to kill process after cgroup add failure: %s", killErr.Error())
 			}
+			sprintf := fmt.Sprintf("add process to cgroups V1 failed, %s", err.Error())
+			return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
 		}
 	}
 
 	signal := make(chan bool, 1)
+	errorSignal := make(chan bool, 1)
 	go func() {
 		for {
 			if comm, err := getProcessComm(command.Process.Pid); err != nil {
 				log.Errorf(ctx, "get process comm failed, %s", err.Error())
+				errorSignal <- true
+				break
 			} else {
 				if cmdline, err := getProcessCmdline(command.Process.Pid); err != nil {
 					log.Errorf(ctx, "get process cmdline failed, %s", err.Error())
+					errorSignal <- true
+					break
 				} else {
 					if cmdline == "" {
 						log.Errorf(ctx, "unknown err, process exit.")
-						signal <- true
+						errorSignal <- true
 						break
 					}
 				}
@@ -246,7 +253,9 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 		}
 	}()
 
-	if <-signal {
+	select {
+	case <-signal:
+		// Process successfully paused, continue with resume logic
 		for {
 			if err := command.Process.Signal(syscall.SIGCONT); err != nil {
 				sprintf := fmt.Sprintf("send signal failed, %s", err.Error())
@@ -256,13 +265,15 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 
 			if comm, err := getProcessComm(command.Process.Pid); err != nil {
 				log.Errorf(ctx, "get process comm failed, %s", err.Error())
+				return spec.ReturnFail(spec.OsCmdExecFailed, fmt.Sprintf("get process comm failed during resume, %s", err.Error()))
 			} else {
 				if cmdline, err := getProcessCmdline(command.Process.Pid); err != nil {
 					log.Errorf(ctx, "get process cmdline failed, %s", err.Error())
+					return spec.ReturnFail(spec.OsCmdExecFailed, fmt.Sprintf("get process cmdline failed during resume, %s", err.Error()))
 				} else {
 					if cmdline == "" {
-						log.Errorf(ctx, "unknown err, process exit.")
-						break
+						log.Errorf(ctx, "unknown err, process exit during resume.")
+						return spec.ReturnFail(spec.OsCmdExecFailed, "nsexec process exited unexpectedly during resume")
 					}
 				}
 
@@ -272,6 +283,9 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 				}
 			}
 		}
+	case <-errorSignal:
+		// Process failed during pause phase
+		return spec.ReturnFail(spec.OsCmdExecFailed, "nsexec process exited unexpectedly during pause")
 	}
 
 	if expModel.Target == "mem" && expModel.ActionFlags["avoid-being-killed"] == "true" {
