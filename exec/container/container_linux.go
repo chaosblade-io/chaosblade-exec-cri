@@ -102,12 +102,35 @@ func ExecContainer(ctx context.Context, pid int32, command string) (output strin
 
 	log.Debugf(ctx, "Command Result, output: %s, errMsg: %s, err: %v", outMsg.String(), errMsg.String(), err)
 
+	// 优先检查 stdout 中是否有 JSON 格式的响应
+	if outMsg.Len() > 0 {
+		outStr := strings.TrimSpace(outMsg.String())
+		// 如果 stdout 包含 JSON 格式的响应，优先返回
+		if strings.HasPrefix(outStr, "{") && strings.HasSuffix(outStr, "}") {
+			return outStr, nil
+		}
+	}
+
+	// 检查 stderr 中的内容
+	if errMsg.Len() > 0 {
+		errStr := strings.TrimSpace(errMsg.String())
+		// 如果 stderr 包含 JSON 格式的响应，返回它
+		if strings.HasPrefix(errStr, "{") && strings.HasSuffix(errStr, "}") {
+			return errStr, nil
+		}
+		// 如果 stderr 不包含 JSON，但有内容，也返回
+		return errStr, nil
+	}
+
+	// 如果 stdout 有内容但不是 JSON 格式，返回它
+	if outMsg.Len() > 0 {
+		return strings.TrimSpace(outMsg.String()), nil
+	}
+
+	// 如果命令执行失败且没有输出，返回执行错误
 	if err != nil {
 		return "", err
 	}
-	if errMsg.Len() > 0 {
-		return errMsg.String(), nil
-	}
 
-	return outMsg.String(), nil
+	return "", nil
 }

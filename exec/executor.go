@@ -19,8 +19,9 @@ package exec
 import (
 	"context"
 	"fmt"
-	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"strings"
+
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 
 	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
@@ -59,19 +60,44 @@ var CommonFunc = func(uid string, ctx context.Context, model *spec.ExpModel) str
 }
 
 func ConvertContainerOutputToResponse(output string, err error, defaultResponse *spec.Response) *spec.Response {
+	// 优先处理容器输出的内容，即使有 err 也要尝试解析 output
+	output = strings.TrimSpace(output)
+	if output != "" {
+		// 尝试提取JSON部分，如果输出包含换行符，取第一行
+		lines := strings.Split(output, "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			// 检查是否是JSON格式
+			if strings.HasPrefix(line, "{") && strings.HasSuffix(line, "}") {
+				response := spec.Decode(line, defaultResponse)
+				if response != nil {
+					return response
+				}
+			}
+		}
+
+		// 如果所有行都不是有效的JSON，尝试解析整个输出
+		response := spec.Decode(output, defaultResponse)
+		if response != nil {
+			return response
+		}
+	}
+
+	// 如果 output 为空或解析失败，且有 err，则处理 err
 	if err != nil {
 		response := spec.Decode(err.Error(), defaultResponse)
-		if response.Success {
+		if response != nil && response.Success {
 			return response
 		}
 		return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "execContainer", err)
 	}
-	output = strings.TrimSpace(output)
-	if output == "" {
-		return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "execContainer",
-			"cannot get result message from container, please execute recovery and try again")
-	}
-	return spec.Decode(output, defaultResponse)
+
+	// 如果 output 为空且没有 err，返回通用错误
+	return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "execContainer",
+		"cannot get result message from container, please execute recovery and try again")
 }
 
 // GetContainer return container by container flag, such as container id or container name.
