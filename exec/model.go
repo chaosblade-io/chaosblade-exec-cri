@@ -264,20 +264,23 @@ func newCpuCommandModelSpecForDocker() spec.ExpModelCommandSpec {
 		case *cpu.FullLoadActionCommand:
 			action.SetLongDesc("The CPU load experiment scenario in container is the same as the CPU scenario of basic resources")
 			action.SetExample(
-				`# Create a CPU full load experiment in the container
-blade create cri cpu load --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
+				`# Create a CPU full load experiment in the container (Linux)
+blade create cri cpu load --container-id ee54f1e61c08
 
-#Specifies two random kernel's full load in the container
-blade create cri cpu load --cpu-percent 60 --cpu-count 2 --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
+# Create a CPU full load experiment in the container (macOS - requires chaosblade-release)
+blade create cri cpu load --chaosblade-release /root/chaosblade-1.7.5-darwin-amd64.tar.gz --container-id ee54f1e61c08
 
-# Specifies that the kernel is full load with index 0, 3, and that the kernel's index starts at 0
-blade create cri cpu load --cpu-list 0,3 --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
+# Specifies two random kernel's full load in the container (Linux)
+blade create cri cpu load --cpu-percent 60 --cpu-count 2 --container-id ee54f1e61c08
 
-# Specify the kernel full load of indexes 1-3
-blade create cri cpu load --cpu-list 1-3 --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
+# Specifies that the kernel is full load with index 0, 3, and that the kernel's index starts at 0 (Linux)
+blade create cri cpu load --cpu-list 0,3 --container-id ee54f1e61c08
 
-# Specified percentage load in the container
-blade create cri cpu load --cpu-percent 60 --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08`)
+# Specify the kernel full load of indexes 1-3 (Linux)
+blade create cri cpu load --cpu-list 1-3 --container-id ee54f1e61c08
+
+# Specified percentage load in the container (Linux)
+blade create cri cpu load --cpu-percent 60 --container-id ee54f1e61c08`)
 		}
 	}
 	return cpuCommandModelSpec
@@ -419,7 +422,7 @@ var EndpointFlag = &spec.ExpFlag{
 
 var ChaosBladeReleaseFlag = &spec.ExpFlag{
 	Name: "chaosblade-release",
-	Desc: "The pull path of the chaosblade tar package, for example, --chaosblade-release /opt/chaosblade-0.4.0.tar.gz",
+	Desc: "The pull path of the chaosblade tar package, for example, --chaosblade-release /opt/chaosblade-0.4.0.tar.gz. Required on macOS/Darwin platform, optional on Linux platform (uses namespace execution)",
 }
 
 var ChaosBladeOverrideFlag = &spec.ExpFlag{
