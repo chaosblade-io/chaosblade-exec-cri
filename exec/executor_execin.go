@@ -19,10 +19,11 @@ package exec
 import (
 	"context"
 	"fmt"
-	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"path"
 	"strconv"
 	"strings"
+
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 
 	"github.com/chaosblade-io/chaosblade-exec-cri/version"
 	"github.com/chaosblade-io/chaosblade-spec-go/channel"
@@ -107,12 +108,7 @@ func (r *RunCmdInContainerExecutorByCP) Exec(uid string, ctx context.Context, ex
 	}
 	output, err := r.Client.ExecContainer(ctx, container.ContainerId, command)
 	var defaultResponse *spec.Response
-	if err != nil {
-		log.Errorf(ctx, "execContainer err: %v", err)
-		return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "execContainer", err)
-	}
 	return ConvertContainerOutputToResponse(output, err, defaultResponse)
-	//return spec.Success()
 }
 
 func (r *RunCmdInContainerExecutorByCP) SetChannel(channel spec.Channel) {
