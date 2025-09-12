@@ -1,0 +1,186 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # 当推送以 'v' 开头的标签时触发
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.7.4)'
+        required: true
+        type: string
+
+env:
+  GO_VERSION: '1.20'
+  CGO_ENABLED: 0
+
+jobs:
+  # 构建多平台二进制文件
+  build-matrix:
+    name: Build on ${{ matrix.os }} (${{ matrix.goos }}/${{ matrix.goarch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            platform: linux_amd64
+            runner_arch: x64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            platform: linux_arm64
+            runner_arch: arm64
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            platform: darwin_amd64
+            runner_arch: x64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            platform: darwin_arm64
+            runner_arch: arm64
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # 获取完整的 Git 历史用于版本信息
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+
+    - name: Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Install dependencies
+      run: |
+        go mod download
+        go mod verify
+
+    - name: Get Version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          # Extract version from tag (remove 'v' prefix)
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+        fi
+        echo "Building version: $VERSION"
+
+    - name: Build ${{ matrix.platform }}
+      id: build
+      run: |
+        make ${{ matrix.platform }}
+
+    - name: Verify Build Output
+      id: verify
+      run: |
+        echo "Verifying build output for ${{ matrix.platform }}..."
+        ls -la target/
+        BUILD_DIR=$(find target/ -name "chaosblade-*-${{ matrix.platform }}" -type d | head -1)
+        if [ -n "$BUILD_DIR" ] && [ -d "$BUILD_DIR" ]; then
+          echo "✅ Build directory created successfully: $BUILD_DIR"
+          find "$BUILD_DIR" -type f -name "chaos_*" | head -1
+          find "$BUILD_DIR" -type f -name "*.yaml" | head -1
+          echo "build_dir=$BUILD_DIR" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Build directory not found for ${{ matrix.platform }}"
+          exit 1
+        fi
+
+    - name: Package ${{ matrix.platform }}
+      id: package
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        BUILD_DIR="${{ steps.verify.outputs.build_dir }}"
+        PACKAGE_NAME="chaosblade-exec-cri-${VERSION}-${{ matrix.platform }}.tar.gz"
+        
+        echo "Packaging $BUILD_DIR as $PACKAGE_NAME"
+        
+        # Create the package
+        tar -czf "$PACKAGE_NAME" -C "$(dirname "$BUILD_DIR")" "$(basename "$BUILD_DIR")"
+        
+        # Verify the package
+        echo "Package contents:"
+        tar -tzf "$PACKAGE_NAME" | head -10
+        
+        # Get file size
+        PACKAGE_SIZE=$(stat -c%s "$PACKAGE_NAME" 2>/dev/null || stat -f%z "$PACKAGE_NAME" 2>/dev/null || echo "unknown")
+        echo "Package size: $PACKAGE_SIZE bytes"
+        
+        echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+        echo "package_path=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+
+    - name: Upload Package Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: chaosblade-exec-cri-${{ steps.version.outputs.version }}-${{ matrix.platform }}
+        path: ${{ steps.package.outputs.package_path }}
+        retention-days: 30
+
+  # 创建 GitHub Release
+  create-release:
+    name: Create Release
+    needs: build-matrix
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Get Version
+      id: version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Building release for version: $VERSION"
+
+    - name: Download All Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./artifacts
+
+    - name: List Downloaded Artifacts
+      run: |
+        echo "Downloaded artifacts:"
+        find ./artifacts -name "*.tar.gz" -exec ls -lh {} \;
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        generate_release_notes: true
+        body: |
+          ## Downloads
+          
+          | Platform | Architecture | Download |
+          |----------|-------------|----------|
+          | Linux | AMD64 | [chaosblade-exec-cri-${{ steps.version.outputs.version }}-linux_amd64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/chaosblade-exec-cri-${{ steps.version.outputs.version }}-linux_amd64.tar.gz) |
+          | Linux | ARM64 | [chaosblade-exec-cri-${{ steps.version.outputs.version }}-linux_arm64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/chaosblade-exec-cri-${{ steps.version.outputs.version }}-linux_arm64.tar.gz) |
+          | macOS | AMD64 | [chaosblade-exec-cri-${{ steps.version.outputs.version }}-darwin_amd64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/chaosblade-exec-cri-${{ steps.version.outputs.version }}-darwin_amd64.tar.gz) |
+          | macOS | ARM64 | [chaosblade-exec-cri-${{ steps.version.outputs.version }}-darwin_arm64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/chaosblade-exec-cri-${{ steps.version.outputs.version }}-darwin_arm64.tar.gz) |
+        files: |
+          ./artifacts/*/chaosblade-exec-cri-${{ steps.version.outputs.version }}-*.tar.gz
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Clean up
+      run: |
+        rm -rf ./artifacts
+

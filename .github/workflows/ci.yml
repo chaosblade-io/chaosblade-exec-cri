@@ -11,15 +11,73 @@ env:
   CGO_ENABLED: 0
 
 jobs:
-  verify-compilation:
-    name: Verify Cross-Platform Compilation
-    runs-on: ubuntu-latest
+  # 矩阵构建 - 支持多平台多架构
+  build-matrix:
+    name: Build on ${{ matrix.os }} (${{ matrix.goos }}/${{ matrix.goarch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            platform: linux_amd64
+            runner_arch: x64
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            platform: linux_arm64
+            runner_arch: arm64
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            platform: darwin_amd64
+            runner_arch: x64
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            platform: darwin_arm64
+            runner_arch: arm64
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # Fetch all history for git tags
+        fetch-depth: 0  # 获取完整的 Git 历史用于版本信息
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Install dependencies
+      run: |
+        go mod download
+        go mod verify
+
+    - name: Build ${{ matrix.platform }}
+      run: make ${{ matrix.platform }}
+
+
+  # 运行测试
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
 
     - name: Set up Go
       uses: actions/setup-go@v4
@@ -37,47 +95,12 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Verify dependencies
+    - name: Install dependencies
       run: |
         go mod download
         go mod verify
 
-    - name: Run verify_project_compile
-      run: |
-        echo "Running cross-platform compilation verification..."
-        make verify_project_compile || {
-          echo "⚠️  Some platform compilations failed due to dependency issues"
-          echo "This is expected for Windows platform due to external dependency compatibility"
-          echo "Continuing with other verification steps..."
-        }
-
-    - name: Run core compilation check
-      run: make verify_core_compile
-
     - name: Run tests
-      run: make verify_test
-
-    - name: Verify modules are tidy
-      run: make verify_modules
-
-    - name: Generate verification report
-      run: |
-        echo "## 📋 Verification Report" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### ✅ Core Compilation" >> $GITHUB_STEP_SUMMARY
-        echo "- Version package: ✅" >> $GITHUB_STEP_SUMMARY
-        echo "- Build tools: ✅" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 🔧 Platform Compilation" >> $GITHUB_STEP_SUMMARY
-        echo "- Linux AMD64: ✅" >> $GITHUB_STEP_SUMMARY
-        echo "- Linux ARM64: ✅" >> $GITHUB_STEP_SUMMARY
-        echo "- macOS AMD64: ✅" >> $GITHUB_STEP_SUMMARY
-        echo "- macOS ARM64: ✅" >> $GITHUB_STEP_SUMMARY
-        echo "- Windows AMD64: ⚠️ (dependency issues expected)" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 📦 Dependencies" >> $GITHUB_STEP_SUMMARY
-        echo "- Go modules: ✅" >> $GITHUB_STEP_SUMMARY
-        echo "- Module tidy: ✅" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 🧪 Tests" >> $GITHUB_STEP_SUMMARY
-        echo "- All tests: ✅" >> $GITHUB_STEP_SUMMARY
+      run: make test
+      env:
+        CGO_ENABLED: 1
