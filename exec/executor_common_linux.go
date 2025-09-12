@@ -178,20 +178,52 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 			return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
 		}
 
+		log.Debugf(ctx, "cgroup2 group path for pid %d: %s", pid, g)
+
+		// 验证路径格式
+		if g == "" || g == "/" {
+			sprintf := fmt.Sprintf("invalid cgroup path: %s, pid: %d", g, pid)
+			return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
+		}
+
 		cgPath := path.Join(cgroupRoot, g)
+		log.Debugf(ctx, "full cgroup path: %s", cgPath)
+
+		// 检查路径是否存在
+		if _, err := os.Stat(cgPath); os.IsNotExist(err) {
+			log.Warnf(ctx, "cgroup path does not exist: %s, trying to create", cgPath)
+			// 尝试创建目录
+			if err := os.MkdirAll(cgPath, 0755); err != nil {
+				sprintf := fmt.Sprintf("failed to create cgroup path %s: %s", cgPath, err.Error())
+				return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
+			}
+		}
+
+		// 尝试加载现有的 cgroup 管理器
 		cg, err := cgroupsv2.LoadManager(cgroupRoot, cgPath)
 		if err != nil {
 			if err != cgroupsv2.ErrCgroupDeleted {
+				log.Debugf(ctx, "LoadManager failed, trying NewManager with path: %s", cgPath)
+
 				// 创建一个空的 Resources 对象，用于创建新的 cgroup 管理器
 				resources := &cgroupsv2.Resources{}
 				if cg, err = cgroupsv2.NewManager(cgroupRoot, cgPath, resources); err != nil {
-					sprintf := fmt.Sprintf("cgroups V2 new manager failed, %s", err.Error())
-					return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
+					// 如果 NewManager 也失败，尝试使用根路径作为回退
+					log.Warnf(ctx, "NewManager failed with path %s, trying root path as fallback", cgPath)
+					if cg, err = cgroupsv2.NewManager(cgroupRoot, "/", resources); err != nil {
+						sprintf := fmt.Sprintf("cgroups V2 new manager failed, cgroupRoot: %s, cgPath: %s, error: %s", cgroupRoot, cgPath, err.Error())
+						return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
+					}
+					log.Infof(ctx, "Successfully created cgroup manager with root path as fallback")
+				} else {
+					log.Infof(ctx, "Successfully created cgroup manager with path: %s", cgPath)
 				}
 			} else {
 				sprintf := fmt.Sprintf("cgroups V2 load failed, %s", err.Error())
 				return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
 			}
+		} else {
+			log.Infof(ctx, "Successfully loaded existing cgroup manager with path: %s", cgPath)
 		}
 		if err := command.Start(); err != nil {
 			sprintf := fmt.Sprintf("command start failed, %s", err.Error())
