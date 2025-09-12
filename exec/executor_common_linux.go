@@ -178,18 +178,59 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 			return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
 		}
 
+		log.Debugf(ctx, "cgroup2 group path for pid %d: %s", pid, g)
+
+		if g == "" || g == "/" {
+			sprintf := fmt.Sprintf("invalid cgroup path: %s, pid: %d", g, pid)
+			return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
+		}
+
 		cgPath := path.Join(cgroupRoot, g)
-		cg, err := cgroupsv2.LoadManager(cgroupRoot, cgPath)
-		if err != nil {
-			if err != cgroupsv2.ErrCgroupDeleted {
-				if cg, err = cgroupsv2.NewManager(cgroupRoot, cgPath, nil); err != nil {
-					sprintf := fmt.Sprintf("cgroups V2 new manager failed, %s", err.Error())
-					return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
-				}
-			} else {
-				sprintf := fmt.Sprintf("cgroups V2 load failed, %s", err.Error())
+		log.Debugf(ctx, "full cgroup path: %s", cgPath)
+
+		if _, err := os.Stat(cgPath); os.IsNotExist(err) {
+			log.Warnf(ctx, "cgroup path does not exist: %s, trying to create", cgPath)
+			if err := os.MkdirAll(cgPath, 0755); err != nil {
+				sprintf := fmt.Sprintf("failed to create cgroup path %s: %s", cgPath, err.Error())
 				return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
 			}
+		}
+
+		// 注意：LoadManager 和 NewManager 的第二个参数应该是相对路径，不包含 cgroupRoot 前缀
+		cg, err := cgroupsv2.LoadManager(cgroupRoot, g)
+		if err != nil {
+			if err == cgroupsv2.ErrCgroupDeleted {
+				log.Warnf(ctx, "Cgroup was deleted, trying to recreate with relative path: %s", g)
+				// 当cgroup被删除时，确保路径存在
+				if _, err := os.Stat(cgPath); os.IsNotExist(err) {
+					log.Warnf(ctx, "Cgroup path does not exist after deletion: %s, trying to create", cgPath)
+					if err := os.MkdirAll(cgPath, 0755); err != nil {
+						log.Warnf(ctx, "Failed to recreate cgroup path %s: %s", cgPath, err.Error())
+					}
+				}
+			} else {
+				log.Debugf(ctx, "LoadManager failed, trying NewManager with relative path: %s", g)
+			}
+
+			// 创建一个空的 Resources 对象，用于创建新的 cgroup 管理器
+			resources := &cgroupsv2.Resources{}
+			if cg, err = cgroupsv2.NewManager(cgroupRoot, g, resources); err != nil {
+				// 如果 NewManager 也失败，尝试使用根路径作为回退
+				log.Warnf(ctx, "NewManager failed with path %s, trying root path as fallback", g)
+				if cg, err = cgroupsv2.NewManager(cgroupRoot, "/", resources); err != nil {
+					sprintf := fmt.Sprintf("cgroups V2 new manager failed, cgroupRoot: %s, relativePath: %s, error: %s", cgroupRoot, g, err.Error())
+					return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
+				}
+				log.Infof(ctx, "Successfully created cgroup manager with root path as fallback")
+			} else {
+				if err == cgroupsv2.ErrCgroupDeleted {
+					log.Infof(ctx, "Successfully recreated cgroup manager after deletion with relative path: %s", g)
+				} else {
+					log.Infof(ctx, "Successfully created cgroup manager with relative path: %s", g)
+				}
+			}
+		} else {
+			log.Infof(ctx, "Successfully loaded existing cgroup manager with relative path: %s", g)
 		}
 		if err := command.Start(); err != nil {
 			sprintf := fmt.Sprintf("command start failed, %s", err.Error())
