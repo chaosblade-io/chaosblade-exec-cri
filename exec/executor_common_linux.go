@@ -182,7 +182,9 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 		cg, err := cgroupsv2.LoadManager(cgroupRoot, cgPath)
 		if err != nil {
 			if err != cgroupsv2.ErrCgroupDeleted {
-				if cg, err = cgroupsv2.NewManager(cgroupRoot, cgPath, nil); err != nil {
+				// 创建一个空的 Resources 对象，用于创建新的 cgroup 管理器
+				resources := &cgroupsv2.Resources{}
+				if cg, err = cgroupsv2.NewManager(cgroupRoot, cgPath, resources); err != nil {
 					sprintf := fmt.Sprintf("cgroups V2 new manager failed, %s", err.Error())
 					return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
 				}
