@@ -200,30 +200,31 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 		}
 
 		// 尝试加载现有的 cgroup 管理器
-		cg, err := cgroupsv2.LoadManager(cgroupRoot, cgPath)
+		// 注意：LoadManager 和 NewManager 的第二个参数应该是相对路径，不包含 cgroupRoot 前缀
+		cg, err := cgroupsv2.LoadManager(cgroupRoot, g)
 		if err != nil {
 			if err != cgroupsv2.ErrCgroupDeleted {
-				log.Debugf(ctx, "LoadManager failed, trying NewManager with path: %s", cgPath)
+				log.Debugf(ctx, "LoadManager failed, trying NewManager with relative path: %s", g)
 
 				// 创建一个空的 Resources 对象，用于创建新的 cgroup 管理器
 				resources := &cgroupsv2.Resources{}
-				if cg, err = cgroupsv2.NewManager(cgroupRoot, cgPath, resources); err != nil {
+				if cg, err = cgroupsv2.NewManager(cgroupRoot, g, resources); err != nil {
 					// 如果 NewManager 也失败，尝试使用根路径作为回退
-					log.Warnf(ctx, "NewManager failed with path %s, trying root path as fallback", cgPath)
+					log.Warnf(ctx, "NewManager failed with path %s, trying root path as fallback", g)
 					if cg, err = cgroupsv2.NewManager(cgroupRoot, "/", resources); err != nil {
-						sprintf := fmt.Sprintf("cgroups V2 new manager failed, cgroupRoot: %s, cgPath: %s, error: %s", cgroupRoot, cgPath, err.Error())
+						sprintf := fmt.Sprintf("cgroups V2 new manager failed, cgroupRoot: %s, relativePath: %s, error: %s", cgroupRoot, g, err.Error())
 						return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
 					}
 					log.Infof(ctx, "Successfully created cgroup manager with root path as fallback")
 				} else {
-					log.Infof(ctx, "Successfully created cgroup manager with path: %s", cgPath)
+					log.Infof(ctx, "Successfully created cgroup manager with relative path: %s", g)
 				}
 			} else {
 				sprintf := fmt.Sprintf("cgroups V2 load failed, %s", err.Error())
 				return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
 			}
 		} else {
-			log.Infof(ctx, "Successfully loaded existing cgroup manager with path: %s", cgPath)
+			log.Infof(ctx, "Successfully loaded existing cgroup manager with relative path: %s", g)
 		}
 		if err := command.Start(); err != nil {
 			sprintf := fmt.Sprintf("command start failed, %s", err.Error())
