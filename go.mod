@@ -3,8 +3,8 @@ module github.com/chaosblade-io/chaosblade-exec-cri
 go 1.20
 
 require (
-	github.com/chaosblade-io/chaosblade-exec-os v1.7.4
-	github.com/chaosblade-io/chaosblade-spec-go v1.7.4
+	github.com/chaosblade-io/chaosblade-exec-os v1.7.5-0.20250905063806-b2d815847b22
+	github.com/chaosblade-io/chaosblade-spec-go v1.7.5-0.20250902032330-12bd479355fe
 	github.com/containerd/cgroups v1.0.2-0.20210605143700-23b51209bf7b
 	github.com/containerd/containerd v1.5.6
 	github.com/docker/docker v0.0.0-20180612054059-a9fbbdc8dd87
@@ -67,3 +67,5 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+replace github.com/chaosblade-io/chaosblade-exec-os => /Users/changjun/Codespace/ChaosBladeProjects/chaosblade-exec-os
