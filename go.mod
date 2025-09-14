@@ -3,7 +3,7 @@ module github.com/chaosblade-io/chaosblade-exec-cri
 go 1.20
 
 require (
-	github.com/chaosblade-io/chaosblade-exec-os v1.7.5-0.20250905063806-b2d815847b22
+	github.com/chaosblade-io/chaosblade-exec-os v1.7.5
 	github.com/chaosblade-io/chaosblade-spec-go v1.7.5
 	github.com/containerd/cgroups v1.0.2-0.20210605143700-23b51209bf7b
 	github.com/containerd/containerd v1.5.6
