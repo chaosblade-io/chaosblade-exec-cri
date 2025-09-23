@@ -20,6 +20,7 @@ package docker
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -54,7 +55,7 @@ func execContainerWithConf(ctx context.Context, containerId, command string, con
 	errorMsg := stderr.String()
 	log.Debugf(ctx, "execute result: %s, error msg: %s", result, errorMsg)
 	if errorMsg != "" {
-		return "", fmt.Errorf(errorMsg)
+		return "", errors.New(errorMsg)
 	} else {
 		return result, nil
 	}

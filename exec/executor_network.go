@@ -19,13 +19,14 @@ package exec
 import (
 	"context"
 	"fmt"
+	"os/exec"
+	"path"
+	"strings"
+
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/model"
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 	"github.com/chaosblade-io/chaosblade-spec-go/util"
-	"os/exec"
-	"path"
-	"strings"
 )
 
 // NetworkExecutor is an executor implementation which used copy chaosblade tool to the target container and executed
@@ -47,7 +48,7 @@ func (r *NetworkExecutor) Name() string {
 
 func (r *NetworkExecutor) Exec(uid string, ctx context.Context, expModel *spec.ExpModel) *spec.Response {
 	if err := r.SetClient(expModel); err != nil {
-		log.Errorf(ctx, spec.ContainerExecFailed.Sprintf("GetClient", err))
+		log.Errorf(ctx, "%s", spec.ContainerExecFailed.Sprintf("GetClient", err))
 		return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "GetClient", err)
 	}
 	containerId := expModel.ActionFlags[ContainerIdFlag.Name]
@@ -59,7 +60,7 @@ func (r *NetworkExecutor) Exec(uid string, ctx context.Context, expModel *spec.E
 	}
 	pid, err, code := r.Client.GetPidById(ctx, container.ContainerId)
 	if err != nil {
-		log.Errorf(ctx, err.Error())
+		log.Errorf(ctx, "%s", err.Error())
 		return spec.ResponseFail(code, err.Error(), nil)
 	}
 

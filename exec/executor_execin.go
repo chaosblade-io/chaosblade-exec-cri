@@ -57,7 +57,7 @@ func (r *RunCmdInContainerExecutorByCP) Name() string {
 
 func (r *RunCmdInContainerExecutorByCP) Exec(uid string, ctx context.Context, expModel *spec.ExpModel) *spec.Response {
 	if err := r.SetClient(expModel); err != nil {
-		log.Errorf(ctx, spec.ContainerExecFailed.Sprintf("GetClient", err))
+		log.Errorf(ctx, "%s", spec.ContainerExecFailed.Sprintf("GetClient", err))
 		return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "GetClient", err)
 	}
 	containerId := expModel.ActionFlags[ContainerIdFlag.Name]
@@ -80,7 +80,7 @@ func (r *RunCmdInContainerExecutorByCP) Exec(uid string, ctx context.Context, ex
 			override = false
 		}
 		if resp, ok := channel.NewLocalChannel().IsAllCommandsAvailable(ctx, []string{"tar"}); !ok {
-			log.Errorf(ctx, resp.Err)
+			log.Errorf(ctx, "%s", resp.Err)
 			return resp
 		}
 

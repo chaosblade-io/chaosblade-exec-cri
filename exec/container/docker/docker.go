@@ -104,7 +104,7 @@ func (c *Client) GetPidById(ctx context.Context, containerId string) (int32, err
 	inspect, err := c.client.ContainerInspect(context.Background(), containerId)
 
 	if err != nil {
-		return -1, fmt.Errorf(spec.ContainerExecFailed.Sprintf("GetContainerList", err.Error())), spec.ContainerExecFailed.Code
+		return -1, errors.New(spec.ContainerExecFailed.Sprintf("GetContainerList", err.Error())), spec.ContainerExecFailed.Code
 	}
 
 	return int32(inspect.State.Pid), nil, spec.OK.Code
@@ -148,10 +148,10 @@ func (c *Client) GetContainerFromDocker(option types.ContainerListOptions) (cont
 	containers, err := c.client.ContainerList(context.Background(), option)
 
 	if err != nil {
-		return container.ContainerInfo{}, fmt.Errorf(spec.ContainerExecFailed.Sprintf("GetContainerList", err.Error())), spec.ContainerExecFailed.Code
+		return container.ContainerInfo{}, errors.New(spec.ContainerExecFailed.Sprintf("GetContainerList", err.Error())), spec.ContainerExecFailed.Code
 	}
 	if containers == nil || len(containers) == 0 {
-		return container.ContainerInfo{}, fmt.Errorf(spec.ParameterInvalidDockContainerId.Sprintf("container-id")), spec.ParameterInvalidDockContainerId.Code
+		return container.ContainerInfo{}, errors.New(spec.ParameterInvalidDockContainerId.Sprintf("container-id")), spec.ParameterInvalidDockContainerId.Code
 	}
 	containerInfo := convertContainerInfo(containers[0])
 	return containerInfo, nil, spec.OK.Code
@@ -190,13 +190,13 @@ func (c *Client) ExecuteAndRemove(ctx context.Context, config *containertype.Con
 		// pull image if not exists
 		_, err := c.pullImage(config.Image)
 		if err != nil {
-			return "", "", fmt.Errorf(spec.ImagePullFailed.Sprintf(config.Image, err)), spec.ImagePullFailed.Code
+			return "", "", errors.New(spec.ImagePullFailed.Sprintf(config.Image, err)), spec.ImagePullFailed.Code
 		}
 	}
 	containerId, err = c.createAndStartContainer(ctx, config, hostConfig, networkConfig, containerName)
 	if err != nil {
 		c.RemoveContainer(ctx, containerId, true)
-		return containerId, "", fmt.Errorf(spec.ContainerExecFailed.Sprintf("CreateAndStartContainer", err)), spec.ContainerExecFailed.Code
+		return containerId, "", errors.New(spec.ContainerExecFailed.Sprintf("CreateAndStartContainer", err)), spec.ContainerExecFailed.Code
 	}
 
 	output, err = c.ExecContainer(ctx, containerId, command)
@@ -204,7 +204,7 @@ func (c *Client) ExecuteAndRemove(ctx context.Context, config *containertype.Con
 		if removed {
 			c.RemoveContainer(ctx, containerId, true)
 		}
-		return containerId, "", fmt.Errorf(spec.ContainerExecFailed.Sprintf("ContainerExecCmd", err)), spec.ContainerExecFailed.Code
+		return containerId, "", errors.New(spec.ContainerExecFailed.Sprintf("ContainerExecCmd", err)), spec.ContainerExecFailed.Code
 	}
 	log.Infof(ctx, "Execute output in container: %s", output)
 	if removed {
