@@ -18,6 +18,7 @@ package exec
 
 import (
 	"context"
+
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
 
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
@@ -113,7 +114,7 @@ func (e *removeActionExecutor) Exec(uid string, ctx context.Context, model *spec
 	flags := model.ActionFlags
 	client, err := GetClientByRuntime(model)
 	if err != nil {
-		log.Errorf(ctx, spec.ContainerExecFailed.Sprintf("GetClient", err))
+		log.Errorf(ctx, "%s", spec.ContainerExecFailed.Sprintf("GetClient", err))
 		return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "GetClient", err)
 	}
 	containerId := flags[ContainerIdFlag.Name]
@@ -127,7 +128,7 @@ func (e *removeActionExecutor) Exec(uid string, ctx context.Context, model *spec
 
 	err = client.RemoveContainer(ctx, container.ContainerId, judgeForce(forceFlag))
 	if err != nil {
-		log.Errorf(ctx, spec.ContainerExecFailed.Sprintf("ContainerRemove", err))
+		log.Errorf(ctx, "%s", spec.ContainerExecFailed.Sprintf("ContainerRemove", err))
 		return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "ContainerRemove", err)
 	}
 	return spec.ReturnSuccess(uid)

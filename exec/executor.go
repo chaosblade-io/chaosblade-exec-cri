@@ -104,7 +104,7 @@ func ConvertContainerOutputToResponse(output string, err error, defaultResponse 
 func GetContainer(ctx context.Context, client container.Container, uid string, containerId, containerName string, containerLabelSelector map[string]string) (container.ContainerInfo, *spec.Response) {
 	if containerId == "" && containerName == "" && len(containerLabelSelector) == 0 {
 		tips := fmt.Sprintf("%s or %s or %s", ContainerIdFlag.Name, ContainerNameFlag.Name, ContainerLabelSelectorFlag.Name)
-		log.Errorf(ctx, spec.ParameterLess.Sprintf(tips))
+		log.Errorf(ctx, "%s", spec.ParameterLess.Sprintf(tips))
 		return container.ContainerInfo{}, spec.ResponseFailWithFlags(spec.ParameterLess, tips)
 	}
 	var container container.ContainerInfo
@@ -118,7 +118,7 @@ func GetContainer(ctx context.Context, client container.Container, uid string, c
 		container, err, code = client.GetContainerByLabelSelector(containerLabelSelector)
 	}
 	if err != nil {
-		log.Errorf(ctx, err.Error())
+		log.Errorf(ctx, "%s", err.Error())
 		return container, spec.ResponseFail(code, err.Error(), nil)
 	}
 	return container, spec.ReturnSuccess(container)

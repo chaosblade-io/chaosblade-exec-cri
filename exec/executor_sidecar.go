@@ -19,8 +19,9 @@ package exec
 import (
 	"context"
 	"fmt"
-	"github.com/chaosblade-io/chaosblade-spec-go/log"
 	"time"
+
+	"github.com/chaosblade-io/chaosblade-spec-go/log"
 
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 	"github.com/docker/docker/api/types/container"
@@ -41,7 +42,7 @@ func (*RunInSidecarContainerExecutor) Name() string {
 
 func (r *RunInSidecarContainerExecutor) Exec(uid string, ctx context.Context, expModel *spec.ExpModel) *spec.Response {
 	if err := r.SetClient(expModel); err != nil {
-		log.Errorf(ctx, spec.ContainerExecFailed.Sprintf("GetClient", err))
+		log.Errorf(ctx, "%s", spec.ContainerExecFailed.Sprintf("GetClient", err))
 		return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "GetClient", err)
 	}
 	containerId := expModel.ActionFlags[ContainerIdFlag.Name]
@@ -106,7 +107,7 @@ func (r *RunInSidecarContainerExecutor) startAndExecInContainer(uid string, ctx 
 		config, hostConfig, networkConfig, containerName, true, time.Second, command, containerInfo)
 
 	if err != nil {
-		log.Errorf(ctx, err.Error())
+		log.Errorf(ctx, "%s", err.Error())
 		return spec.ResponseFail(code, err.Error(), nil)
 	}
 	returnedResponse := ConvertContainerOutputToResponse(output, err, defaultResponse)
