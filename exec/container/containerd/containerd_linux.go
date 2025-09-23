@@ -111,11 +111,11 @@ func (c *Client) GetPidById(ctx context.Context, containerId string) (int32, err
 
 	container, err := c.cclient.LoadContainer(ctx, containerId)
 	if err != nil {
-		return -1, fmt.Errorf(spec.ContainerExecFailed.Sprintf("GetContainerList", err.Error())), spec.ContainerExecFailed.Code
+		return -1, errors.New(spec.ContainerExecFailed.Sprintf("GetContainerList", err.Error())), spec.ContainerExecFailed.Code
 	}
 	task, err := container.Task(ctx, nil)
 	if err != nil {
-		return -1, fmt.Errorf(spec.ContainerExecFailed.Sprintf("GetContainerList", err.Error())), spec.ContainerExecFailed.Code
+		return -1, errors.New(spec.ContainerExecFailed.Sprintf("GetContainerList", err.Error())), spec.ContainerExecFailed.Code
 	}
 
 	return int32(task.Pid()), nil, spec.OK.Code
@@ -238,27 +238,27 @@ func (c *Client) ExecuteAndRemove(ctx context.Context, config *containertype.Con
 		}
 	}
 	if networkNsPath == "" {
-		return "", "", fmt.Errorf(spec.CreateContainerFailed.Sprintf("target container network namespace path is nil")), spec.CreateContainerFailed.Code
+		return "", "", errors.New(spec.CreateContainerFailed.Sprintf("target container network namespace path is nil")), spec.CreateContainerFailed.Code
 	}
 
 	// 2. pull image befor create container
 	if _, err := c.cclient.Pull(c.Ctx, config.Image, containerd.WithPullUnpack, containerd.WithPullSnapshotter(snapshotter)); err != nil {
-		return "", "", fmt.Errorf(spec.ImagePullFailed.Sprintf(config.Image, err.Error())), spec.ImagePullFailed.Code
+		return "", "", errors.New(spec.ImagePullFailed.Sprintf(config.Image, err.Error())), spec.ImagePullFailed.Code
 	}
 
 	images, err := c.cclient.GetImage(c.Ctx, config.Image)
 	if err != nil {
-		return "", "", fmt.Errorf(spec.ImagePullFailed.Sprintf(config.Image, fmt.Sprintf("Get image failed, %s", err.Error()))), spec.ImagePullFailed.Code
+		return "", "", errors.New(spec.ImagePullFailed.Sprintf(config.Image, fmt.Sprintf("Get image failed, %s", err.Error()))), spec.ImagePullFailed.Code
 	}
 
 	unpacked, err := images.IsUnpacked(c.Ctx, snapshotter)
 	if err != nil {
-		return "", "", fmt.Errorf(spec.ImagePullFailed.Sprintf(config.Image, fmt.Sprintf("Get isUnpacked failed: %v", err))), spec.ImagePullFailed.Code
+		return "", "", errors.New(spec.ImagePullFailed.Sprintf(config.Image, fmt.Sprintf("Get isUnpacked failed: %v", err))), spec.ImagePullFailed.Code
 	}
 
 	if !unpacked {
 		if err := images.Unpack(c.Ctx, snapshotter); err != nil {
-			return "", "", fmt.Errorf(spec.ImagePullFailed.Sprintf(config.Image, fmt.Sprintf("Unpack failed: %v", err))), spec.ImagePullFailed.Code
+			return "", "", errors.New(spec.ImagePullFailed.Sprintf(config.Image, fmt.Sprintf("Unpack failed: %v", err))), spec.ImagePullFailed.Code
 		}
 	}
 
@@ -287,7 +287,7 @@ func (c *Client) ExecuteAndRemove(ctx context.Context, config *containertype.Con
 
 	runtimeOpts, err := getRuntimeOptions()
 	if err != nil {
-		return "", "", fmt.Errorf(spec.CreateContainerFailed.Sprintf(fmt.Sprintf("Get runtime options failed: %v", err))), spec.CreateContainerFailed.Code
+		return "", "", errors.New(spec.CreateContainerFailed.Sprintf(fmt.Sprintf("Get runtime options failed: %v", err))), spec.CreateContainerFailed.Code
 	}
 	cOpts = append(cOpts, containerd.WithRuntime(DefaultRuntime, runtimeOpts))
 	opts = append(opts, oci.WithAnnotations(config.Labels))
@@ -299,7 +299,7 @@ func (c *Client) ExecuteAndRemove(ctx context.Context, config *containertype.Con
 	// 5. create new container
 	var cntr containerd.Container
 	if cntr, err = c.cclient.NewContainer(c.Ctx, containerId, cOpts...); err != nil {
-		return "", "", fmt.Errorf(spec.CreateContainerFailed.Sprintf(err)), spec.CreateContainerFailed.Code
+		return "", "", errors.New(spec.CreateContainerFailed.Sprintf(err)), spec.CreateContainerFailed.Code
 	}
 
 	defer func() {
@@ -314,7 +314,7 @@ func (c *Client) ExecuteAndRemove(ctx context.Context, config *containertype.Con
 	// 6. start a container that has been created
 	task, err := c.NewTask(config.Image, cntr)
 	if err != nil {
-		return "", "", fmt.Errorf(spec.CreateContainerFailed.Sprintf(fmt.Sprintf("New task, %s", err.Error()))), spec.CreateContainerFailed.Code
+		return "", "", errors.New(spec.CreateContainerFailed.Sprintf(fmt.Sprintf("New task, %s", err.Error()))), spec.CreateContainerFailed.Code
 	}
 	defer func() {
 		if _, err = task.Delete(c.Ctx); err != nil {
@@ -324,21 +324,21 @@ func (c *Client) ExecuteAndRemove(ctx context.Context, config *containertype.Con
 
 	tStatus, err := task.Wait(c.Ctx)
 	if err != nil {
-		return "", "", fmt.Errorf(spec.CreateContainerFailed.Sprintf(fmt.Sprintf("Task wait, %s", err.Error()))), spec.CreateContainerFailed.Code
+		return "", "", errors.New(spec.CreateContainerFailed.Sprintf(fmt.Sprintf("Task wait, %s", err.Error()))), spec.CreateContainerFailed.Code
 	}
 
 	if err = task.Start(c.Ctx); err != nil {
-		return "", "", fmt.Errorf(spec.CreateContainerFailed.Sprintf(fmt.Sprintf("Task start, %s", err.Error()))), spec.CreateContainerFailed.Code
+		return "", "", errors.New(spec.CreateContainerFailed.Sprintf(fmt.Sprintf("Task start, %s", err.Error()))), spec.CreateContainerFailed.Code
 	}
 
 	// 7. exec command in new container
 	output, err = c.ExecContainer(ctx, containerId, command)
 	if err != nil {
-		return containerId, output, fmt.Errorf(spec.ContainerExecFailed.Sprintf(command, err)), spec.ContainerExecFailed.Code
+		return containerId, output, errors.New(spec.ContainerExecFailed.Sprintf(command, err)), spec.ContainerExecFailed.Code
 	}
 
 	if err := task.Kill(c.Ctx, syscall.SIGKILL); err != nil {
-		return containerId, output, fmt.Errorf(spec.ContainerExecFailed.Sprintf(command, err)), spec.ContainerExecFailed.Code
+		return containerId, output, errors.New(spec.ContainerExecFailed.Sprintf(command, err)), spec.ContainerExecFailed.Code
 	}
 
 	<-tStatus

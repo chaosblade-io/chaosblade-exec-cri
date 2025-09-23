@@ -59,7 +59,7 @@ func (r *CommonExecutor) Name() string {
 
 func (r *CommonExecutor) Exec(uid string, ctx context.Context, expModel *spec.ExpModel) *spec.Response {
 	if err := r.SetClient(expModel); err != nil {
-		log.Errorf(ctx, spec.ContainerExecFailed.Sprintf("GetClient,error: %v", err))
+		log.Errorf(ctx, "%s", spec.ContainerExecFailed.Sprintf("GetClient,error: %v", err))
 		return spec.ResponseFailWithFlags(spec.ContainerExecFailed, "GetClient", err)
 	}
 	containerId := expModel.ActionFlags[ContainerIdFlag.Name]
