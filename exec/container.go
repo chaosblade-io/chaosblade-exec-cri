@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
-
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 )
 
@@ -97,8 +96,7 @@ func (r *RemoveActionCommand) LongDesc() string {
 	return "remove a container"
 }
 
-type removeActionExecutor struct {
-}
+type removeActionExecutor struct{}
 
 func (*removeActionExecutor) Name() string {
 	return "remove"

@@ -102,7 +102,6 @@ func ping(cli *client.Client) (*client.Client, error) {
 
 func (c *Client) GetPidById(ctx context.Context, containerId string) (int32, error, int32) {
 	inspect, err := c.client.ContainerInspect(context.Background(), containerId)
-
 	if err != nil {
 		return -1, errors.New(spec.ContainerExecFailed.Sprintf("GetContainerList", err.Error())), spec.ContainerExecFailed.Code
 	}
@@ -128,7 +127,6 @@ func (c *Client) GetContainerByName(ctx context.Context, containerName string) (
 		),
 	}
 	return c.GetContainerFromDocker(option)
-
 }
 
 func (c *Client) GetContainerByLabelSelector(labels map[string]string) (container.ContainerInfo, error, int32) {
@@ -146,7 +144,6 @@ func (c *Client) GetContainerByLabelSelector(labels map[string]string) (containe
 
 func (c *Client) GetContainerFromDocker(option types.ContainerListOptions) (container.ContainerInfo, error, int32) {
 	containers, err := c.client.ContainerList(context.Background(), option)
-
 	if err != nil {
 		return container.ContainerInfo{}, errors.New(spec.ContainerExecFailed.Sprintf("GetContainerList", err.Error())), spec.ContainerExecFailed.Code
 	}
@@ -181,8 +178,8 @@ func (c *Client) RemoveContainer(ctx context.Context, containerId string, force 
 func (c *Client) ExecuteAndRemove(ctx context.Context, config *containertype.Config, hostConfig *containertype.HostConfig,
 	networkConfig *network.NetworkingConfig, containerName string, removed bool,
 	timeout time.Duration,
-	command string, containerInfo container.ContainerInfo) (containerId string, output string, err error, code int32) {
-
+	command string, containerInfo container.ContainerInfo,
+) (containerId string, output string, err error, code int32) {
 	log.Debugf(ctx, "command: '%s', image: %s, containerName: %s", command, config.Image, containerName)
 	// check image exists or not
 	_, err = c.getImageByRef(ctx, config.Image)
@@ -244,7 +241,8 @@ func (c *Client) pullImage(ref string) (string, error) {
 
 // createAndStartContainer
 func (c *Client) createAndStartContainer(ctx context.Context, config *containertype.Config, hostConfig *containertype.HostConfig,
-	networkConfig *network.NetworkingConfig, containerName string) (string, error) {
+	networkConfig *network.NetworkingConfig, containerName string,
+) (string, error) {
 	body, err := c.client.ContainerCreate(context.Background(), config, hostConfig, networkConfig, containerName)
 	if err != nil {
 		log.Warnf(ctx, "Create container: %s, err: %s", containerName, err.Error())

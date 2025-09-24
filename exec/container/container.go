@@ -49,7 +49,7 @@ type Container interface {
 		command string, containerInfo ContainerInfo) (containerId string, output string, err error, code int32)
 }
 
-//ContainerInfo for server
+// ContainerInfo for server
 type ContainerInfo struct {
 	ContainerId   string
 	ContainerName string

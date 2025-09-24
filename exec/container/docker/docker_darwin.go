@@ -83,7 +83,7 @@ func (c *Client) CopyToContainer(ctx context.Context, containerId, srcFile, dstP
 	if err != nil {
 		return err
 	}
-	file, err := os.OpenFile(srcFile, os.O_RDONLY, 0600)
+	file, err := os.OpenFile(srcFile, os.O_RDONLY, 0o600)
 	if err != nil {
 		return err
 	}

@@ -21,8 +21,9 @@ package exec
 import (
 	"fmt"
 
-	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
+
+	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container"
 )
 
 // DockerExpModelSpec type definition for Windows

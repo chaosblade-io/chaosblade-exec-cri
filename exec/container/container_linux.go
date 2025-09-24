@@ -31,7 +31,6 @@ import (
 )
 
 func CopyToContainer(ctx context.Context, pid uint32, srcFile, dstPath, extractDirName string, override bool) error {
-
 	args := fmt.Sprintf("-t %d -p -m -- /bin/sh -c", pid)
 	argsArray := strings.Split(args, " ")
 	nsbin := path.Join(util.GetProgramPath(), "bin", spec.NSExecBin)
@@ -85,7 +84,6 @@ func CopyToContainer(ctx context.Context, pid uint32, srcFile, dstPath, extractD
 }
 
 func ExecContainer(ctx context.Context, pid int32, command string) (output string, err error) {
-
 	args := fmt.Sprintf("-t %d -p -m -n -- /bin/sh -c", pid)
 	argsArray := strings.Split(args, " ")
 	nsbin := path.Join(util.GetProgramPath(), "bin", spec.NSExecBin)

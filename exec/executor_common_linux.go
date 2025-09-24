@@ -139,12 +139,12 @@ func (r *CommonExecutor) SetChannel(channel spec.Channel) {
 }
 
 func (r *CommonExecutor) DeployChaosBlade(ctx context.Context, containerId string,
-	srcFile, extractDirName string, override bool) error {
+	srcFile, extractDirName string, override bool,
+) error {
 	return nil
 }
 
 func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel, pid int32, args string) *spec.Response {
-
 	chaosOsBin := path.Join(util.GetProgramPath(), spec.BinPath, spec.ChaosOsBin)
 
 	args = fmt.Sprintf("-s -t %d -p -n -- %s %s", pid, chaosOsBin, args)
@@ -190,7 +190,7 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 
 		if _, err := os.Stat(cgPath); os.IsNotExist(err) {
 			log.Warnf(ctx, "cgroup path does not exist: %s, trying to create", cgPath)
-			if err := os.MkdirAll(cgPath, 0755); err != nil {
+			if err := os.MkdirAll(cgPath, 0o755); err != nil {
 				sprintf := fmt.Sprintf("failed to create cgroup path %s: %s", cgPath, err.Error())
 				return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
 			}
@@ -204,7 +204,7 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 				// 当cgroup被删除时，确保路径存在
 				if _, err := os.Stat(cgPath); os.IsNotExist(err) {
 					log.Warnf(ctx, "Cgroup path does not exist after deletion: %s, trying to create", cgPath)
-					if err := os.MkdirAll(cgPath, 0755); err != nil {
+					if err := os.MkdirAll(cgPath, 0o755); err != nil {
 						log.Warnf(ctx, "Failed to recreate cgroup path %s: %s", cgPath, err.Error())
 					}
 				}

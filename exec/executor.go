@@ -22,14 +22,16 @@ import (
 	"strings"
 
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
+	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 
 	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container"
-	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 )
 
 // BladeBin is the blade path in the chaosblade-tool image
-const BladeBin = "/opt/chaosblade/blade"
-const DstChaosBladeDir = "/opt"
+const (
+	BladeBin         = "/opt/chaosblade/blade"
+	DstChaosBladeDir = "/opt"
+)
 
 // BaseClientExecutor
 type BaseClientExecutor struct {
