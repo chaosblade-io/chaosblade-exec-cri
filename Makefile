@@ -87,6 +87,8 @@ help:
 	@echo "  Utility targets:"
 	@echo "    clean           - Clean all build artifacts"
 	@echo "    test            - Run tests with race detection"
+	@echo "    format          - Format Go code using goimports and gofumpt"
+	@echo "    verify          - Verify Go code formatting and import order"
 	@echo "    help            - Show this help message"
 	@echo ""
 	@echo "  Examples:"
@@ -160,3 +162,15 @@ test:
 clean:
 	go clean ./...
 	rm -rf $(BUILD_TARGET)
+
+.PHONY: format
+format:
+	@echo "Running goimports and gofumpt to format Go code..."
+	@./hack/update-imports.sh
+	@./hack/update-gofmt.sh
+
+.PHONY: verify
+verify:
+	@echo "Verifying Go code formatting and import order..."
+	@./hack/verify-gofmt.sh
+	@./hack/verify-imports.sh

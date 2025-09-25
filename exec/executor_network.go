@@ -113,6 +113,7 @@ func (r *NetworkExecutor) SetChannel(channel spec.Channel) {
 }
 
 func (r *NetworkExecutor) DeployChaosBlade(ctx context.Context, containerId string,
-	srcFile, extractDirName string, override bool) error {
+	srcFile, extractDirName string, override bool,
+) error {
 	return nil
 }

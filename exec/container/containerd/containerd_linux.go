@@ -29,7 +29,6 @@ import (
 
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
 
-	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 	"github.com/chaosblade-io/chaosblade-spec-go/util"
 	"github.com/containerd/containerd"
@@ -45,6 +44,8 @@ import (
 	containertype "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/opencontainers/runtime-spec/specs-go"
+
+	"github.com/chaosblade-io/chaosblade-exec-cri/exec/container"
 )
 
 const (
@@ -108,7 +109,6 @@ func NewClient(endpoint, namespace string) (*Client, error) {
 }
 
 func (c *Client) GetPidById(ctx context.Context, containerId string) (int32, error, int32) {
-
 	container, err := c.cclient.LoadContainer(ctx, containerId)
 	if err != nil {
 		return -1, errors.New(spec.ContainerExecFailed.Sprintf("GetContainerList", err.Error())), spec.ContainerExecFailed.Code
@@ -164,7 +164,7 @@ func convertContainerInfo(containerDetail containers.Container) container.Contai
 	return container.ContainerInfo{
 		ContainerId:   containerDetail.ID,
 		ContainerName: containerDetail.Labels["io.kubernetes.container.name"],
-		//Env:             spec.Process.Env,
+		// Env:             spec.Process.Env,
 		Labels: containerDetail.Labels,
 		Spec:   containerDetail.Spec,
 	}
@@ -196,7 +196,6 @@ func (c *Client) RemoveContainer(ctx context.Context, containerId string, _ bool
 }
 
 func (c *Client) CopyToContainer(ctx context.Context, containerId, srcFile, dstPath, extractDirName string, override bool) error {
-
 	containerDetail, err := c.cclient.LoadContainer(c.Ctx, containerId)
 	if err != nil {
 		return err
@@ -223,8 +222,8 @@ func (c *Client) ExecContainer(ctx context.Context, containerId, command string)
 // ExecuteAndRemove: create and start a container for executing a command, and remove the container
 func (c *Client) ExecuteAndRemove(ctx context.Context, config *containertype.Config, hostConfig *containertype.HostConfig,
 	networkConfig *network.NetworkingConfig, containerName string, removed bool, timeout time.Duration,
-	command string, containerInfo container.ContainerInfo) (containerId string, output string, err error, code int32) {
-
+	command string, containerInfo container.ContainerInfo,
+) (containerId string, output string, err error, code int32) {
 	snapshotter := DefaultSnapshotter
 
 	// 1. get container network namespace path
@@ -356,6 +355,7 @@ func (c *Client) NewTask(imageRef string, cntr containerd.Container) (containerd
 	}
 	return task, nil
 }
+
 func (c *Client) Spec(ci container.ContainerInfo) (*oci.Spec, error) {
 	var s oci.Spec
 	if err := json.Unmarshal(ci.Spec.Value, &s); err != nil {
@@ -369,6 +369,7 @@ func getRuntimeOptions() (interface{}, error) {
 
 	return runtimeOpts, nil
 }
+
 func withMount() oci.SpecOpts {
 	return func(ctx context.Context, client oci.Client, container *containers.Container, s *specs.Spec) error {
 		mounts := make([]specs.Mount, 0)

@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
-
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
@@ -99,7 +98,8 @@ func (r *RunInSidecarContainerExecutor) getContainerConfig(expModel *spec.ExpMod
 }
 
 func (r *RunInSidecarContainerExecutor) startAndExecInContainer(uid string, ctx context.Context, expModel *spec.ExpModel,
-	hostConfig *container.HostConfig, networkConfig *network.NetworkingConfig, containerName string, containerInfo execContainer.ContainerInfo) *spec.Response {
+	hostConfig *container.HostConfig, networkConfig *network.NetworkingConfig, containerName string, containerInfo execContainer.ContainerInfo,
+) *spec.Response {
 	config := r.getContainerConfig(expModel)
 	var defaultResponse *spec.Response
 	command := r.CommandFunc(uid, ctx, expModel)

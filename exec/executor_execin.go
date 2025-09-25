@@ -23,11 +23,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/chaosblade-io/chaosblade-spec-go/channel"
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
+	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 
 	"github.com/chaosblade-io/chaosblade-exec-cri/version"
-	"github.com/chaosblade-io/chaosblade-spec-go/channel"
-	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 )
 
 var defaultBladeTarFilePath = fmt.Sprintf("/opt/chaosblade-%s.tar.gz", version.BladeVersion)
@@ -115,7 +115,8 @@ func (r *RunCmdInContainerExecutorByCP) SetChannel(channel spec.Channel) {
 }
 
 func (r *RunCmdInContainerExecutorByCP) DeployChaosBlade(ctx context.Context, containerId string,
-	srcFile, extractDirName string, override bool) error {
+	srcFile, extractDirName string, override bool,
+) error {
 	// check if the blade tool exists
 	// todo for test
 	output, err := r.Client.ExecContainer(ctx, containerId, fmt.Sprintf("[ -e %s ] && echo True || echo False", BladeBin))

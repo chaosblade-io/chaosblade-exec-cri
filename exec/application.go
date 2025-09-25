@@ -30,7 +30,7 @@ var JvmSpecFileForYaml = ""
 
 // getJvmModels returns java experiment specs
 func getJvmModels() []spec.ExpModelCommandSpec {
-	var jvmSpecFile = path.Join(util.GetYamlHome(), fmt.Sprintf("chaosblade-jvm-spec-%s.yaml", version.BladeVersion))
+	jvmSpecFile := path.Join(util.GetYamlHome(), fmt.Sprintf("chaosblade-jvm-spec-%s.yaml", version.BladeVersion))
 	if JvmSpecFileForYaml != "" {
 		jvmSpecFile = JvmSpecFileForYaml
 	}
