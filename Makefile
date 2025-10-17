@@ -9,7 +9,7 @@ UNAME := $(shell uname)
 # Get version from Git tag, fallback to default if no tag
 GIT_TAG := $(shell git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')
 ifeq ($(GIT_TAG), )
-	GIT_TAG=1.7.4
+	GIT_TAG=1.8.0
 endif
 
 ifeq ($(BLADE_VERSION), )
