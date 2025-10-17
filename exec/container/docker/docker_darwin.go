@@ -26,19 +26,19 @@ import (
 	"strings"
 
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/pkg/stdcopy"
 )
 
 // execContainer with command which does not contain "sh -c" in the target container
-func execContainerWithConf(ctx context.Context, containerId, command string, config types.ExecConfig, c *Client) (output string, err error) {
+func execContainerWithConf(ctx context.Context, containerId, command string, config container.ExecOptions, c *Client) (output string, err error) {
 	log.Infof(ctx, "execute command: %s", strings.Join(config.Cmd, " "))
 	id, err := c.client.ContainerExecCreate(ctx, containerId, config)
 	if err != nil {
 		log.Warnf(ctx, "Create exec for container: %s, err: %s", containerId, err.Error())
 		return "", err
 	}
-	resp, err := c.client.ContainerExecAttach(ctx, id.ID, types.ExecStartCheck{})
+	resp, err := c.client.ContainerExecAttach(ctx, id.ID, container.ExecAttachOptions{})
 	if err != nil {
 		log.Warnf(ctx, "Attach exec for container: %s, err: %s", containerId, err.Error())
 		return "", err
@@ -62,7 +62,7 @@ func execContainerWithConf(ctx context.Context, containerId, command string, con
 }
 
 func (c *Client) ExecContainer(ctx context.Context, containerId, command string) (output string, err error) {
-	return execContainerWithConf(ctx, containerId, command, types.ExecConfig{
+	return execContainerWithConf(ctx, containerId, command, container.ExecOptions{
 		AttachStderr: true,
 		AttachStdout: true,
 		Cmd:          []string{"sh", "-c", command},
@@ -75,7 +75,7 @@ func (c *Client) ExecContainer(ctx context.Context, containerId, command string)
 // If the same file exits in the dstPath, it will be override if the override arg is true, otherwise not
 func (c *Client) CopyToContainer(ctx context.Context, containerId, srcFile, dstPath, extractDirName string, override bool) error {
 	// must be a tar file
-	options := types.CopyToContainerOptions{
+	options := container.CopyToContainerOptions{
 		AllowOverwriteDirWithFile: override,
 		CopyUIDGID:                true,
 	}
