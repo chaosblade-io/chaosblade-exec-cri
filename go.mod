@@ -6,10 +6,9 @@ require (
 	github.com/chaosblade-io/chaosblade-exec-os v1.8.0
 	github.com/chaosblade-io/chaosblade-spec-go v1.8.0
 	github.com/containerd/cgroups v1.1.0
-	github.com/containerd/containerd v1.7.28
+	github.com/containerd/containerd v1.7.23
 	github.com/containerd/containerd/api v1.9.0
 	github.com/docker/docker v28.5.1+incompatible
-	github.com/gogo/protobuf v1.3.2
 	github.com/opencontainers/runtime-spec v1.2.1
 )
 
