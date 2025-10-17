@@ -20,6 +20,7 @@ package exec
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -199,7 +200,7 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 		// 注意：LoadManager 和 NewManager 的第二个参数应该是相对路径，不包含 cgroupRoot 前缀
 		cg, err := cgroupsv2.LoadManager(cgroupRoot, g)
 		if err != nil {
-			if err == cgroupsv2.ErrCgroupDeleted {
+			if errors.Is(err, cgroups.ErrCgroupDeleted) {
 				log.Warnf(ctx, "Cgroup was deleted, trying to recreate with relative path: %s", g)
 				// 当cgroup被删除时，确保路径存在
 				if _, err := os.Stat(cgPath); os.IsNotExist(err) {
@@ -223,7 +224,7 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 				}
 				log.Infof(ctx, "Successfully created cgroup manager with root path as fallback")
 			} else {
-				if err == cgroupsv2.ErrCgroupDeleted {
+				if errors.Is(err, cgroups.ErrCgroupDeleted) {
 					log.Infof(ctx, "Successfully recreated cgroup manager after deletion with relative path: %s", g)
 				} else {
 					log.Infof(ctx, "Successfully created cgroup manager with relative path: %s", g)
