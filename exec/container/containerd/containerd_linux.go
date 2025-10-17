@@ -228,7 +228,7 @@ func (c *Client) ExecuteAndRemove(ctx context.Context, config *containertype.Con
 
 	// 1. get container network namespace path
 	var specInfo specs.Spec
-	json.Unmarshal(containerInfo.Spec.Value, &specInfo)
+	json.Unmarshal(containerInfo.Spec.GetValue(), &specInfo)
 	specNS := specInfo.Linux.Namespaces
 	var networkNsPath string
 	for _, nsInfo := range specNS {
@@ -358,7 +358,7 @@ func (c *Client) NewTask(imageRef string, cntr containerd.Container) (containerd
 
 func (c *Client) Spec(ci container.ContainerInfo) (*oci.Spec, error) {
 	var s oci.Spec
-	if err := json.Unmarshal(ci.Spec.Value, &s); err != nil {
+	if err := json.Unmarshal(ci.Spec.GetValue(), &s); err != nil {
 		return nil, err
 	}
 	return &s, nil
