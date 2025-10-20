@@ -26,7 +26,6 @@ import (
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 	"github.com/docker/docker/api/types"
 	containertype "github.com/docker/docker/api/types/container"
-	dockercontainer "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
@@ -112,7 +111,7 @@ func (c *Client) GetPidById(ctx context.Context, containerId string) (int32, err
 }
 
 func (c *Client) GetContainerById(ctx context.Context, containerId string) (container.ContainerInfo, error, int32) {
-	option := dockercontainer.ListOptions{
+	option := containertype.ListOptions{
 		Filters: filters.NewArgs(
 			filters.Arg("id", containerId),
 		),
@@ -122,7 +121,7 @@ func (c *Client) GetContainerById(ctx context.Context, containerId string) (cont
 
 // getContainerByName returns the container object by container name
 func (c *Client) GetContainerByName(ctx context.Context, containerName string) (container.ContainerInfo, error, int32) {
-	option := dockercontainer.ListOptions{
+	option := containertype.ListOptions{
 		All: true,
 		Filters: filters.NewArgs(
 			filters.Arg("name", containerName),
@@ -138,13 +137,13 @@ func (c *Client) GetContainerByLabelSelector(labels map[string]string) (containe
 		args = append(args, filters.Arg("label", fmt.Sprintf("%s=%s", k, v)))
 	}
 
-	return c.GetContainerFromDocker(dockercontainer.ListOptions{
+	return c.GetContainerFromDocker(containertype.ListOptions{
 		All:     true,
 		Filters: filters.NewArgs(args...),
 	})
 }
 
-func (c *Client) GetContainerFromDocker(option dockercontainer.ListOptions) (container.ContainerInfo, error, int32) {
+func (c *Client) GetContainerFromDocker(option containertype.ListOptions) (container.ContainerInfo, error, int32) {
 	containers, err := c.client.ContainerList(context.Background(), option)
 	if err != nil {
 		return container.ContainerInfo{}, errors.New(spec.ContainerExecFailed.Sprintf("GetContainerList", err.Error())), spec.ContainerExecFailed.Code
@@ -166,7 +165,7 @@ func convertContainerInfo(container2 types.Container) container.ContainerInfo {
 
 // RemoveContainer
 func (c *Client) RemoveContainer(ctx context.Context, containerId string, force bool) error {
-	err := c.client.ContainerRemove(context.Background(), containerId, dockercontainer.RemoveOptions{
+	err := c.client.ContainerRemove(context.Background(), containerId, containertype.RemoveOptions{
 		Force: force,
 	})
 	if err != nil {
@@ -264,7 +263,7 @@ func (c *Client) createAndStartContainer(ctx context.Context, config *containert
 
 // startContainer
 func (c *Client) startContainer(ctx context.Context, containerId string) error {
-	err := c.client.ContainerStart(context.Background(), containerId, dockercontainer.StartOptions{})
+	err := c.client.ContainerStart(context.Background(), containerId, containertype.StartOptions{})
 	if err != nil {
 		log.Warnf(ctx, "Start container: %s, err: %s", containerId, err.Error())
 		return err
