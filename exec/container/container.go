@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/containerd/typeurl/v2"
 	containertype "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
-	"github.com/gogo/protobuf/types"
 )
 
 const (
@@ -54,7 +54,7 @@ type ContainerInfo struct {
 	ContainerId   string
 	ContainerName string
 	Labels        map[string]string
-	Spec          *types.Any
+	Spec          typeurl.Any
 }
 
 func GetChaosBladeImageRef(repo, version string) string {

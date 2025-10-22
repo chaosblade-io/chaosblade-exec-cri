@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"github.com/chaosblade-io/chaosblade-spec-go/log"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -36,7 +38,7 @@ type Client struct {
 // waitAndGetOutput returns the result
 func (c *Client) waitAndGetOutput(ctx context.Context, containerId string) (string, error) {
 	containerWait()
-	resp, err := c.client.ContainerLogs(context.Background(), containerId, types.ContainerLogsOptions{
+	resp, err := c.client.ContainerLogs(context.Background(), containerId, container.LogsOptions{
 		ShowStderr: true,
 		ShowStdout: true,
 	})
@@ -65,7 +67,7 @@ func (c *Client) getImageInspectById(imageId string) (types.ImageInspect, error)
 
 // DeleteImageByImageId
 func (c *Client) deleteImageByImageId(imageId string) error {
-	_, err := c.client.ImageRemove(context.Background(), imageId, types.ImageRemoveOptions{
+	_, err := c.client.ImageRemove(context.Background(), imageId, image.RemoveOptions{
 		Force:         false,
 		PruneChildren: true,
 	})

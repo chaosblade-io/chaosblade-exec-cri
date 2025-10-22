@@ -27,6 +27,7 @@ import (
 	"github.com/docker/docker/api/types"
 	containertype "github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/client"
@@ -110,7 +111,7 @@ func (c *Client) GetPidById(ctx context.Context, containerId string) (int32, err
 }
 
 func (c *Client) GetContainerById(ctx context.Context, containerId string) (container.ContainerInfo, error, int32) {
-	option := types.ContainerListOptions{
+	option := containertype.ListOptions{
 		Filters: filters.NewArgs(
 			filters.Arg("id", containerId),
 		),
@@ -120,7 +121,7 @@ func (c *Client) GetContainerById(ctx context.Context, containerId string) (cont
 
 // getContainerByName returns the container object by container name
 func (c *Client) GetContainerByName(ctx context.Context, containerName string) (container.ContainerInfo, error, int32) {
-	option := types.ContainerListOptions{
+	option := containertype.ListOptions{
 		All: true,
 		Filters: filters.NewArgs(
 			filters.Arg("name", containerName),
@@ -136,13 +137,13 @@ func (c *Client) GetContainerByLabelSelector(labels map[string]string) (containe
 		args = append(args, filters.Arg("label", fmt.Sprintf("%s=%s", k, v)))
 	}
 
-	return c.GetContainerFromDocker(types.ContainerListOptions{
+	return c.GetContainerFromDocker(containertype.ListOptions{
 		All:     true,
 		Filters: filters.NewArgs(args...),
 	})
 }
 
-func (c *Client) GetContainerFromDocker(option types.ContainerListOptions) (container.ContainerInfo, error, int32) {
+func (c *Client) GetContainerFromDocker(option containertype.ListOptions) (container.ContainerInfo, error, int32) {
 	containers, err := c.client.ContainerList(context.Background(), option)
 	if err != nil {
 		return container.ContainerInfo{}, errors.New(spec.ContainerExecFailed.Sprintf("GetContainerList", err.Error())), spec.ContainerExecFailed.Code
@@ -164,7 +165,7 @@ func convertContainerInfo(container2 types.Container) container.ContainerInfo {
 
 // RemoveContainer
 func (c *Client) RemoveContainer(ctx context.Context, containerId string, force bool) error {
-	err := c.client.ContainerRemove(context.Background(), containerId, types.ContainerRemoveOptions{
+	err := c.client.ContainerRemove(context.Background(), containerId, containertype.RemoveOptions{
 		Force: force,
 	})
 	if err != nil {
@@ -211,26 +212,26 @@ func (c *Client) ExecuteAndRemove(ctx context.Context, config *containertype.Con
 }
 
 // ImageExists
-func (c *Client) getImageByRef(ctx context.Context, ref string) (types.ImageSummary, error) {
+func (c *Client) getImageByRef(ctx context.Context, ref string) (image.Summary, error) {
 	args := filters.NewArgs(filters.Arg("reference", ref))
-	list, err := c.client.ImageList(context.Background(), types.ImageListOptions{
+	list, err := c.client.ImageList(context.Background(), image.ListOptions{
 		All:     false,
 		Filters: args,
 	})
 	if err != nil {
 		log.Warnf(ctx, "Get image by name failed. name: %s, err: %s", ref, err)
-		return types.ImageSummary{}, err
+		return image.Summary{}, err
 	}
 	if len(list) == 0 {
 		log.Warnf(ctx, "Cannot find the image by name: %s", ref)
-		return types.ImageSummary{}, errors.New("image not found")
+		return image.Summary{}, errors.New("image not found")
 	}
 	return list[0], nil
 }
 
 // PullImage
 func (c *Client) pullImage(ref string) (string, error) {
-	reader, err := c.client.ImagePull(context.Background(), ref, types.ImagePullOptions{})
+	reader, err := c.client.ImagePull(context.Background(), ref, image.PullOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -243,7 +244,14 @@ func (c *Client) pullImage(ref string) (string, error) {
 func (c *Client) createAndStartContainer(ctx context.Context, config *containertype.Config, hostConfig *containertype.HostConfig,
 	networkConfig *network.NetworkingConfig, containerName string,
 ) (string, error) {
-	body, err := c.client.ContainerCreate(context.Background(), config, hostConfig, networkConfig, containerName)
+	body, err := c.client.ContainerCreate(
+		context.Background(),
+		config,
+		hostConfig,
+		networkConfig,
+		nil,
+		containerName,
+	)
 	if err != nil {
 		log.Warnf(ctx, "Create container: %s, err: %s", containerName, err.Error())
 		return "", err
@@ -255,7 +263,7 @@ func (c *Client) createAndStartContainer(ctx context.Context, config *containert
 
 // startContainer
 func (c *Client) startContainer(ctx context.Context, containerId string) error {
-	err := c.client.ContainerStart(context.Background(), containerId, types.ContainerStartOptions{})
+	err := c.client.ContainerStart(context.Background(), containerId, containertype.StartOptions{})
 	if err != nil {
 		log.Warnf(ctx, "Start container: %s, err: %s", containerId, err.Error())
 		return err
