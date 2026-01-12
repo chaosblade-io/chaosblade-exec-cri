@@ -63,6 +63,7 @@ func NewCriExpModelSpec() *DockerExpModelSpec {
 	expModelCommandSpecs = append(expModelCommandSpecs, execInContainerModelSpecs...)
 	expModelCommandSpecs = append(expModelCommandSpecs, containerSelfModelSpec)
 	modelSpec.addExpModels(expModelCommandSpecs...)
+	addActionExamples(modelSpec)
 	return modelSpec
 }
 
@@ -108,5 +109,6 @@ func NewDockerExpModelSpec() *DockerExpModelSpec {
 	expModelCommandSpecs = append(expModelCommandSpecs, execInContainerModelSpecs...)
 	expModelCommandSpecs = append(expModelCommandSpecs, containerSelfModelSpec)
 	modelSpec.addExpModels(expModelCommandSpecs...)
+	addActionExamples(modelSpec)
 	return modelSpec
 }

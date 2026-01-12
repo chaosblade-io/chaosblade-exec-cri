@@ -20,13 +20,13 @@ package exec
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/cpu"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/disk"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/file"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/mem"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/network"
-	"github.com/chaosblade-io/chaosblade-exec-os/exec/network/tc"
 	"github.com/chaosblade-io/chaosblade-exec-os/exec/process"
 	"github.com/chaosblade-io/chaosblade-spec-go/spec"
 )
@@ -41,277 +41,31 @@ type ResourceExpModelSpec interface {
 }
 
 func newNetworkCommandModelSpecForDocker() spec.ExpModelCommandSpec {
-	networkCommandModelSpec := network.NewNetworkCommandSpec()
-	for _, action := range networkCommandModelSpec.Actions() {
-		v := interface{}(action)
-		switch v.(type) {
-		case *tc.DelayActionSpec:
-			action.SetExample(
-				`# Access to native 8080 and 8081 ports is delayed by 3 seconds, and the delay time fluctuates by 1 second
-blade create cri network delay --time 3000 --offset 1000 --interface eth0 --local-port 8080,8081 --container-id ee54f1e61c08
-
-# Local access to external 14.215.177.39 machine (ping www.baidu.com obtained IP) port 80 delay of 3 seconds
-blade create cri network delay --time 3000 --interface eth0 --remote-port 80 --destination-ip 14.215.177.39 --container-id ee54f1e61c08
-
-# Do a 5 second delay for the entire network card eth0, excluding ports 22 and 8000 to 8080
-blade create cri network delay --time 5000 --interface eth0 --exclude-port 22,8000-8080 --container-id ee54f1e61c08`)
-		case *network.DropActionSpec:
-			action.SetExample(
-				`# Block incoming connection from the port 80
-blade create cri network drop --source-port 80 --network-traffic in --container-id ee54f1e61c08`)
-		case *network.DnsActionSpec:
-			action.SetExample(
-				`# The domain name www.baidu.com is not accessible
-blade create cri network dns --domain www.baidu.com --ip 10.0.0.0 --container-id ee54f1e61c08`)
-		case *tc.LossActionSpec:
-			action.SetExample(`# Access to native 8080 and 8081 ports lost 70% of packets
-blade create cri network loss --percent 70 --interface eth0 --local-port 8080,8081 --container-id ee54f1e61c08
-
-# The machine accesses external 14.215.177.39 machine (ping www.baidu.com) 80 port packet loss rate 100%
-blade create cri network loss --percent 100 --interface eth0 --remote-port 80 --destination-ip 14.215.177.39 --container-id ee54f1e61c08
-
-# Do 60% packet loss for the entire network card Eth0, excluding ports 22 and 8000 to 8080
-blade create cri network loss --percent 60 --interface eth0 --exclude-port 22,8000-8080 --container-id ee54f1e61c08
-
-# Realize the whole network card is not accessible, not accessible time 20 seconds. After executing the following command, the current network is disconnected and restored in 20 seconds. Remember!! Don't forget -timeout parameter
-blade create cri network loss --percent 100 --interface eth0 --timeout 20 --container-id ee54f1e61c08`)
-		case *tc.DuplicateActionSpec:
-			action.SetExample(`# Specify the network card eth0 and repeat the packet by 10%
-blade create cri network duplicate --percent=10 --interface=eth0 --container-id ee54f1e61c08`)
-		case *tc.CorruptActionSpec:
-			action.SetExample(`# Access to the specified IP request packet is corrupted, 80% of the time
-blade create cri network corrupt --percent 80 --destination-ip 180.101.49.12 --interface eth0 --container-id ee54f1e61c08`)
-		case *tc.ReorderActionSpec:
-			action.SetExample(`# Access the specified IP request packet disorder
-blade create cri network reorder --correlation 80 --percent 50 --gap 2 --time 500 --interface eth0 --destination-ip 180.101.49.12 --container-id ee54f1e61c08`)
-		case *network.OccupyActionSpec:
-			action.SetExample(`#Specify port 8080 occupancy
-blade create cri network occupy --port 8080 --force --container-id ee54f1e61c08
-
-# The machine accesses external 14.215.177.39 machine (ping www.baidu.com) 80 port packet loss rate 100%
-blade create cri network loss --percent 100 --interface eth0 --remote-port 80 --destination-ip 14.215.177.39 --container-id ee54f1e61c08`)
-		}
-	}
-	return networkCommandModelSpec
+	return network.NewNetworkCommandSpec()
 }
 
 func newFileCommandSpecForDocker() spec.ExpModelCommandSpec {
-	fileCommandSpec := file.NewFileCommandSpec()
-	for _, action := range fileCommandSpec.Actions() {
-		v := interface{}(action)
-		switch v.(type) {
-		case *file.FileAppendActionSpec:
-			action.SetLongDesc("The file append experiment scenario in container")
-			action.SetExample(
-				`# Appends the content "HELLO WORLD" to the /home/logs/nginx.log file
-blade create cri file append --filepath=/home/logs/nginx.log --content="HELL WORLD" --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Appends the content "HELLO WORLD" to the /home/logs/nginx.log file, interval 10 seconds
-blade create cri file append --filepath=/home/logs/nginx.log --content="HELL WORLD" --interval 10 --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Appends the content "HELLO WORLD" to the /home/logs/nginx.log file, enable base64 encoding
-blade create cri file append --filepath=/home/logs/nginx.log --content=SEVMTE8gV09STEQ= --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# mock interface timeout exception
-blade create cri file append --filepath=/home/logs/nginx.log --content="@{DATE:+%Y-%m-%d %H:%M:%S} ERROR invoke getUser timeout [@{RANDOM:100-200}]ms abc  mock exception" --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-`)
-		case *file.FileAddActionSpec:
-			action.SetLongDesc("The file add experiment scenario in container")
-			action.SetExample(
-				`# Create a file named nginx.log in the /home directory
-blade create cri file add --filepath /home/nginx.log --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Create a file named nginx.log in the /home directory with the contents of HELLO WORLD
-blade create cri file add --filepath /home/nginx.log --content "HELLO WORLD" --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Create a file named nginx.log in the /temp directory and automatically create directories that don't exist
-blade create cri file add --filepath /temp/nginx.log --auto-create-dir --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Create a directory named /nginx in the /temp directory and automatically create directories that don't exist
-blade create cri file add --directory --filepath /temp/nginx --auto-create-dir --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-`)
-
-		case *file.FileChmodActionSpec:
-			action.SetLongDesc("The file permission modification scenario in container")
-			action.SetExample(`# Modify /home/logs/nginx.log file permissions to 777
-blade create cri file chmod --filepath /home/logs/nginx.log --mark=777 --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-`)
-		case *file.FileDeleteActionSpec:
-			action.SetLongDesc("The file delete scenario in container")
-			action.SetExample(
-				`# Delete the file /home/logs/nginx.log
-blade create cri file delete --filepath /home/logs/nginx.log --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Force delete the file /home/logs/nginx.log unrecoverable
-blade create cri file delete --filepath /home/logs/nginx.log --force --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-`)
-		case *file.FileMoveActionSpec:
-			action.SetExample("The file move scenario in container")
-			action.SetExample(`# Move the file /home/logs/nginx.log to /tmp
-blade create cri file delete --filepath /home/logs/nginx.log --target /tmp --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Force Move the file /home/logs/nginx.log to /temp
-blade create cri file delete --filepath /home/logs/nginx.log --target /tmp --force --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Move the file /home/logs/nginx.log to /temp/ and automatically create directories that don't exist
-blade create cri file delete --filepath /home/logs/nginx.log --target /temp --auto-create-dir --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-`)
-		}
-	}
-	return fileCommandSpec
+	return file.NewFileCommandSpec()
 }
 
 func newMemCommandModelSpecForDocker() spec.ExpModelCommandSpec {
-	memCommandModelSpec := mem.NewMemCommandModelSpec()
-	for _, action := range memCommandModelSpec.Actions() {
-		v := interface{}(action)
-		switch v.(type) {
-		case *mem.MemLoadActionCommand:
-			action.SetLongDesc("The memory fill experiment scenario in container")
-			action.SetExample(
-				`# The execution memory footprint is 50%
-blade create cri mem load --mode ram --mem-percent 50 --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# The execution memory footprint is 50%, cache model
-blade create cri mem load --mode cache --mem-percent 50 --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# The execution memory footprint is 50%, usage contains buffer/cache
-blade create cri mem load --mode ram --mem-percent 50 --include-buffer-cache --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# The execution memory footprint is 50% for 200 seconds
-blade create cri mem load --mode ram --mem-percent 50 --timeout 200 --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# 200M memory is reserved
-blade create cri mem load --mode ram --reserve 200 --rate 100 --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08`)
-		}
-	}
-	return memCommandModelSpec
+	return mem.NewMemCommandModelSpec()
 }
 
 func newDiskFillCommandSpecForDocker() spec.ExpModelCommandSpec {
-	commandSpec := disk.NewDiskCommandSpec()
-	for _, action := range commandSpec.Actions() {
-		v := interface{}(action)
-		switch v.(type) {
-		case *disk.FillActionSpec:
-			action.SetLongDesc("The disk fill scenario experiment in the container")
-			action.SetExample(
-				`
-# Fill the /home directory with 40G of disk space in the container
-blade create cri disk fill --path /home --size 40000 --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Fill the /home directory with 80% of the disk space in the container and retains the file handle that populates the disk
-blade create cri disk fill --path /home --percent 80 --retain-handle --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Perform a fixed-size experimental scenario in the container
-blade c cri disk fill --path /home --reserve 1024 --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-`)
-		case *disk.BurnActionSpec:
-			action.SetLongDesc("Disk read and write IO load experiment in the container")
-			action.SetExample(
-				`# The data of rkB/s, wkB/s and % Util were mainly observed. Perform disk read IO high-load scenarios
-blade create cri disk burn --read --path /home --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Perform disk write IO high-load scenarios
-blade create cri disk burn --write --path /home --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Read and write IO load scenarios are performed at the same time. Path is not specified. The default is /
-blade create cri disk burn --read --write --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08`)
-		}
-	}
-	return commandSpec
+	return disk.NewDiskCommandSpec()
 }
 
 func newDiskCommandSpecForDocker() spec.ExpModelCommandSpec {
-	commandSpec := disk.NewDiskCommandSpec()
-	for _, action := range commandSpec.Actions() {
-		v := interface{}(action)
-		switch v.(type) {
-		case *disk.FillActionSpec:
-			action.SetLongDesc("The disk fill scenario experiment in the container")
-			action.SetExample(
-				`
-# Fill the /home directory with 40G of disk space in the container
-blade create cri disk fill --path /home --size 40000 --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Fill the /home directory with 80% of the disk space in the container and retains the file handle that populates the disk
-blade create cri disk fill --path /home --percent 80 --retain-handle --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Perform a fixed-size experimental scenario in the container
-blade c cri disk fill --path /home --reserve 1024 --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-`)
-		case *disk.BurnActionSpec:
-			action.SetLongDesc("Disk read and write IO load experiment in the container")
-			action.SetExample(
-				`# The data of rkB/s, wkB/s and % Util were mainly observed. Perform disk read IO high-load scenarios
-blade create cri disk burn --read --path /home --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Perform disk write IO high-load scenarios
-blade create cri disk burn --write --path /home --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Read and write IO load scenarios are performed at the same time. Path is not specified. The default is /
-blade create cri disk burn --read --write --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08`)
-		}
-	}
-	return commandSpec
+	return disk.NewDiskCommandSpec()
 }
 
 func newCpuCommandModelSpecForDocker() spec.ExpModelCommandSpec {
-	cpuCommandModelSpec := cpu.NewCpuCommandModelSpec()
-	for _, action := range cpuCommandModelSpec.Actions() {
-		v := interface{}(action)
-		switch v.(type) {
-		case *cpu.FullLoadActionCommand:
-			action.SetLongDesc("The CPU load experiment scenario in container is the same as the CPU scenario of basic resources")
-			action.SetExample(
-				`# Create a CPU full load experiment in the container (Linux)
-blade create cri cpu load --container-id ee54f1e61c08
-
-# Create a CPU full load experiment in the container (macOS - requires chaosblade-release)
-blade create cri cpu load --chaosblade-release /root/chaosblade-1.7.5-darwin-amd64.tar.gz --container-id ee54f1e61c08
-
-# Specifies two random kernel's full load in the container (Linux)
-blade create cri cpu load --cpu-percent 60 --cpu-count 2 --container-id ee54f1e61c08
-
-# Specifies that the kernel is full load with index 0, 3, and that the kernel's index starts at 0 (Linux)
-blade create cri cpu load --cpu-list 0,3 --container-id ee54f1e61c08
-
-# Specify the kernel full load of indexes 1-3 (Linux)
-blade create cri cpu load --cpu-list 1-3 --container-id ee54f1e61c08
-
-# Specified percentage load in the container (Linux)
-blade create cri cpu load --cpu-percent 60 --container-id ee54f1e61c08`)
-		}
-	}
-	return cpuCommandModelSpec
+	return cpu.NewCpuCommandModelSpec()
 }
 
 func newProcessCommandModelSpecForDocker() spec.ExpModelCommandSpec {
-	commandModelSpec := process.NewProcessCommandModelSpec()
-	for _, action := range commandModelSpec.Actions() {
-		v := interface{}(action)
-		switch v.(type) {
-		case *process.KillProcessActionCommandSpec:
-			action.SetLongDesc("The process scenario in container is the same as the basic resource process scenario")
-			action.SetExample(
-				`# Kill the nginx process in the container
-blade create cri process kill --process nginx --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Specifies the signal and local port to kill the process in the container
-blade create cri process kill --local-port 8080 --signal 15 --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08`)
-
-		case *process.StopProcessActionCommandSpec:
-			action.SetLongDesc("The process scenario in container is the same as the basic resource process scenario")
-			action.SetExample(
-				`# Pause the process that contains the "nginx" keyword in the container
-blade create cri process stop --process nginx --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08
-
-# Pause the Java process in the container
-blade create cri process stop --process-cmd java --chaosblade-release /root/chaosblade-0.6.0.tar.gz --container-id ee54f1e61c08`)
-
-		}
-	}
-	return commandModelSpec
+	return process.NewProcessCommandModelSpec()
 }
 
 type DockerExpModelSpec struct {
@@ -352,6 +106,34 @@ func (b *DockerExpModelSpec) GetExpActionModelSpec(target, actionName string) sp
 func (b *DockerExpModelSpec) addExpModels(expModel ...spec.ExpModelCommandSpec) {
 	for _, model := range expModel {
 		b.ExpModelSpecs[model.Name()] = model
+	}
+}
+
+func addActionExamples(modelSpec *DockerExpModelSpec) {
+	scopeName := modelSpec.ScopeName
+	for _, expModelSpec := range modelSpec.ExpModels() {
+		for _, action := range expModelSpec.Actions() {
+			// For actions without specific examples, use default string replacement
+			example := action.Example()
+			if example != "" {
+				example = strings.Replace(example,
+					fmt.Sprintf("blade create %s %s", expModelSpec.Name(), action.Name()),
+					fmt.Sprintf("blade create %s %s %s --container-id ee54f1e61c08 --container-runtime docker", scopeName, expModelSpec.Name(), action.Name()),
+					-1,
+				)
+				example = strings.Replace(example,
+					fmt.Sprintf("blade c %s %s", expModelSpec.Name(), action.Name()),
+					fmt.Sprintf("blade c %s %s %s --container-id ee54f1e61c08 --container-runtime docker", scopeName, expModelSpec.Name(), action.Name()),
+					-1,
+				)
+				example = strings.Replace(example,
+					fmt.Sprintf("blade create docker %s %s", expModelSpec.Name(), action.Name()),
+					fmt.Sprintf("blade create %s %s %s --container-id ee54f1e61c08 --container-runtime docker", scopeName, expModelSpec.Name(), action.Name()),
+					-1,
+				)
+				action.SetExample(example)
+			}
+		}
 	}
 }
 
@@ -422,7 +204,7 @@ var EndpointFlag = &spec.ExpFlag{
 
 var ChaosBladeReleaseFlag = &spec.ExpFlag{
 	Name: "chaosblade-release",
-	Desc: "The pull path of the chaosblade tar package, for example, --chaosblade-release /opt/chaosblade-0.4.0.tar.gz. Required on macOS/Darwin platform, optional on Linux platform (uses namespace execution)",
+	Desc: "The pull path of the chaosblade tar package, for example, --chaosblade-release /opt/chaosblade-v1.8.0-linux_amd64.tar.gz. Required on macOS/Darwin platform, optional on Linux platform (uses namespace execution). But if it's a Java scenario, you must add this parameter.",
 }
 
 var ChaosBladeOverrideFlag = &spec.ExpFlag{
