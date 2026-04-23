@@ -42,6 +42,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -200,6 +201,14 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 		if g == "" || g == "/" {
 			sprintf := fmt.Sprintf("invalid cgroup path: %s, pid: %d", g, pid)
 			return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
+		}
+
+		if strings.HasPrefix(g, "/../") {
+			// Inside a container sharing /proc with the host, the cgroup path
+			// contains leading "/../../../" traversal segments. In this case,
+			// strip them and join with the path of "/kubepods.slice".
+			stripped := strings.TrimLeft(g, "/..")
+			g = filepath.Join("/kubepods.slice", stripped)
 		}
 
 		cgPath := path.Join(cgroupRoot, g)
