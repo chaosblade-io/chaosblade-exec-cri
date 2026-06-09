@@ -65,9 +65,9 @@ func checkAndCreateClient(endpoint string, cli *client.Client) (*client.Client, 
 	if cli == nil {
 		var err error
 		if endpoint == "" {
-			cli, err = client.NewClientWithOpts(client.FromEnv, client.WithVersion("1.24"))
+			cli, err = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		} else {
-			cli, err = client.NewClientWithOpts(client.FromEnv, client.WithVersion("1.24"), client.WithHost(endpoint))
+			cli, err = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation(), client.WithHost(endpoint))
 		}
 		if err != nil {
 			return nil, err
