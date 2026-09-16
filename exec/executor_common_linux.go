@@ -261,22 +261,8 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 			return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
 		}
 	} else {
-		control, err := cgroups.Load(osexec.Hierarchy(cgroupRoot), osexec.PidPath(int(pid)))
-		if err != nil {
-			sprintf := fmt.Sprintf("cgroups V1 load failed, %s", err.Error())
-			return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
-		}
-		if err := command.Start(); err != nil {
-			sprintf := fmt.Sprintf("command start failed, %s", err.Error())
-			return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
-		}
-		// add target cgroups
-		if err = control.Add(cgroups.Process{Pid: command.Process.Pid}); err != nil {
-			if killErr := command.Process.Kill(); killErr != nil {
-				log.Errorf(ctx, "failed to kill process after cgroup add failure: %s", killErr.Error())
-			}
-			sprintf := fmt.Sprintf("add process to cgroups V1 failed, %s", err.Error())
-			return spec.ReturnFail(spec.OsCmdExecFailed, sprintf)
+		if err := startV1Command(command, osexec.Hierarchy(cgroupRoot), osexec.PidPath(int(pid)), expModel.Target); err != nil {
+			return spec.ReturnFail(spec.OsCmdExecFailed, err.Error())
 		}
 	}
 
@@ -356,6 +342,27 @@ func execForHangAction(uid string, ctx context.Context, expModel *spec.ExpModel,
 	}
 
 	return spec.ReturnSuccess(command.Process.Pid)
+}
+
+// startV1Command validates the required v1 controllers before starting nsexec,
+// so a failed cgroup load cannot leave a running process outside the target's
+// resource limit. A failed cgroup attachment kills and reaps the process.
+func startV1Command(command *exec.Cmd, hierarchy cgroups.Hierarchy, path cgroups.Path, target string) error {
+	control, err := osexec.LoadV1ForExperiment(hierarchy, path, target)
+	if err != nil {
+		return fmt.Errorf("cgroups V1 load failed: %w", err)
+	}
+	if err := command.Start(); err != nil {
+		return fmt.Errorf("command start failed: %w", err)
+	}
+	if err := control.Add(cgroups.Process{Pid: command.Process.Pid}); err != nil {
+		if killErr := command.Process.Kill(); killErr != nil {
+			return fmt.Errorf("add process to cgroups V1 failed: %w; kill process failed: %v", err, killErr)
+		}
+		_ = command.Wait()
+		return fmt.Errorf("add process to cgroups V1 failed: %w", err)
+	}
+	return nil
 }
 
 func choomChildProcesses(ctx context.Context, pid int) {
