@@ -30,12 +30,9 @@ ifeq ($(BLADE_VERSION), )
 	BLADE_VERSION=$(GIT_TAG)
 endif
 
-CHAOSBLADE_PATH=build/cache/chaosblade
-
-# JVM spec file path configuration
-ifeq ($(JVM_SPEC_PATH), )
-	JVM_SPEC_PATH=$(CHAOSBLADE_PATH)/yaml
-endif
+# JVM spec file path configuration (explicit opt-in).
+# Omitted: build CRI-only spec without JVM-derived scenarios (standalone release path).
+# Provided (aggregate build): the jvm spec yaml MUST exist, otherwise the build fails.
 
 BUILD_TARGET=target
 
@@ -120,7 +117,7 @@ help:
 	@echo ""
 	@echo "  Environment variables:"
 	@echo "    BLADE_VERSION   - Override version (default: from Git tag)"
-	@echo "    JVM_SPEC_PATH   - JVM spec file directory (default: build/cache/chaosblade/yaml)"
+	@echo "    JVM_SPEC_PATH   - JVM spec file directory (optional; omitted = CRI-only spec, provided = jvm yaml must exist)"
 	@echo "    GOOS           - Target OS (linux, darwin)"
 	@echo "    GOARCH         - Target architecture (amd64, arm64)"
 	@echo ""
@@ -142,25 +139,33 @@ darwin_arm64:
 	$(MAKE) build_platform GOOS=darwin GOARCH=arm64
 
 
-# Build for specific platform
-build_platform: pre_build_platform build_yaml_platform
+# Build for specific platform.
+# With JVM_SPEC_PATH: aggregate path, requires the jvm spec yaml (fails fast if missing).
+# Without JVM_SPEC_PATH: CRI-only path for standalone releases.
+build_platform: pre_build_platform
+	@if [ -n "$(JVM_SPEC_PATH)" ]; then \
+		$(MAKE) build_yaml_platform; \
+	else \
+		$(MAKE) build_cri_spec; \
+	fi
 
 pre_build_platform:
 	mkdir -p $(BUILD_TARGET_PLATFORM_YAML)
 
 
-# Check if JVM spec file exists, create empty one if not
+# Aggregate-build invariant: when JVM_SPEC_PATH is provided, the jvm spec yaml must exist.
+# Never fabricate an empty placeholder: it silently drops every JVM-derived scenario.
 ensure_jvm_spec:
 	@if [ ! -f $(JVM_SPEC_PATH)/chaosblade-jvm-spec-$(BLADE_VERSION).yaml ]; then \
-		echo "JVM spec file not found at $(JVM_SPEC_PATH)/chaosblade-jvm-spec-$(BLADE_VERSION).yaml, creating empty file..."; \
-		mkdir -p $(JVM_SPEC_PATH); \
-		echo "# Empty JVM spec file for CRI build" > $(JVM_SPEC_PATH)/chaosblade-jvm-spec-$(BLADE_VERSION).yaml; \
+		echo "Error: JVM spec file not found at $(JVM_SPEC_PATH)/chaosblade-jvm-spec-$(BLADE_VERSION).yaml"; \
+		echo "The aggregate build must build the java component first and pass JVM_SPEC_PATH=<output>/yaml"; \
+		exit 1; \
 	fi
 
 # Build CRI-only specification (without JVM dependency)
 build_cri_spec: pre_build_platform
 	@echo "Building CRI-only specification..."
-	$(GO) run build/spec.go $(CRI_OS_YAML_FILE_PATH_PLATFORM) cri
+	env CGO_ENABLED=0 GO111MODULE=on GOOS= GOARCH= go run build/spec.go $(CRI_OS_YAML_FILE_PATH_PLATFORM) cri
 
 # Legacy build with JVM dependency (for backward compatibility)
 build_yaml: ensure_jvm_spec
